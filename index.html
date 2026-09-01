@@ -579,7 +579,10 @@ async function haalVoorspelling(etappe, start, eind) {
     end_date: eind,
     timezone: "Europe/Paris",
   });
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  // Open-Meteo stuurt geen cache-headers mee, dus zonder no-store mag de
+  // browser zelf gokken hoe lang hij een antwoord hergebruikt. Elke verversing
+  // moet echt langs het netwerk, anders kijk je naar oude cijfers.
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, { cache: "no-store" });
   if (!r.ok) throw new Error(`Open-Meteo gaf status ${r.status}`);
   return r.json();
 }
