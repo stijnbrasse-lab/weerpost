@@ -246,7 +246,16 @@ body {
   white-space: nowrap;
 }
 .regen-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
-.regen-kolom { display: flex; flex-direction: column; gap: .25rem; }
+.regen-kolom { display: flex; flex-direction: column; gap: .18rem; }
+.regen-mm {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .58rem;
+  line-height: 1.2;
+  color: var(--nat);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.regen-mm.is-leeg { color: var(--gedempt); opacity: .55; }
 .regen-vak {
   height: 34px;
   display: flex;
@@ -660,7 +669,8 @@ const toonMm = (v) => v.toFixed(1).replace(".", ",");
 function regenstrip(blokken, dagtotaal) {
   const geldig = (blokken || []).filter((b) => b.mm !== null && b.mm !== undefined);
   if (!geldig.length) return "";
-  if (geldig.reduce((som, b) => som + b.mm, 0) < 0.1) {
+  const totaal = geldig.reduce((som, b) => som + b.mm, 0);
+  if (totaal < 0.1) {
     // Valt er wel regen maar niet overdag, dan is dat het vermelden waard.
     if (dagtotaal < 0.1) return "";
     return `<p class="regen-droog">Overdag droog; deze regen valt 's nachts</p>`;
@@ -675,14 +685,15 @@ function regenstrip(blokken, dagtotaal) {
   const kolommen = blokken.map((b) => {
     const uur = String(b.uur).padStart(2, "0");
     if (b.mm === null || b.mm === undefined) {
-      return `<div class="regen-kolom"><div class="regen-vak"></div><span class="regen-uur">${uur}</span></div>`;
+      return `<div class="regen-kolom"><div class="regen-vak"></div><span class="regen-mm is-leeg">&ndash;</span><span class="regen-uur">${uur}</span></div>`;
     }
+    const leeg = b.mm < 0.05;
     const deel = b.mm <= 0 ? 0 : Math.max(8, Math.round((b.mm / schaal) * 100));
     const staaf = deel ? `<div class="regen-staaf" style="height:${deel}%"></div>` : "";
     const tot = String((b.uur + 2) % 24).padStart(2, "0");
     const titel = `${uur}:00-${tot}:00 · ${toonMm(b.mm)} mm · ${Math.round(b.kans || 0)}% kans`;
     voorlezen.push(`${uur}:00 ${toonMm(b.mm)} mm`);
-    return `<div class="regen-kolom" title="${titel}"><div class="regen-vak">${staaf}</div><span class="regen-uur">${uur}</span></div>`;
+    return `<div class="regen-kolom" title="${titel}"><div class="regen-vak">${staaf}</div><span class="regen-mm${leeg ? " is-leeg" : ""}">${leeg ? "0" : toonMm(b.mm)}</span><span class="regen-uur">${uur}</span></div>`;
   }).join("");
 
   return `<div class="regen">

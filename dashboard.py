@@ -101,7 +101,8 @@ def regenstrip(blokken, dagtotaal=0):
     geldig = [b for b in blokken if b.get("mm") is not None]
     if not geldig:
         return ""
-    if sum(b["mm"] for b in geldig) < 0.1:
+    totaal = sum(b["mm"] for b in geldig)
+    if totaal < 0.1:
         if dagtotaal < 0.1:
             return ""
         return '<p class="regen-droog">Overdag droog; deze regen valt \'s nachts</p>'
@@ -117,14 +118,18 @@ def regenstrip(blokken, dagtotaal=0):
         mm = b.get("mm")
         if mm is None:
             kolommen.append(f'<div class="regen-kolom"><div class="regen-vak"></div>'
+                            f'<span class="regen-mm is-leeg">&ndash;</span>'
                             f'<span class="regen-uur">{uur}</span></div>')
             continue
+        leeg = mm < 0.05
         deel = 0 if mm <= 0 else max(8, round(mm / schaal * 100))
         staaf = f'<div class="regen-staaf" style="height:{deel}%"></div>' if deel else ""
         tot = f'{(b["uur"] + 2) % 24:02d}'
         titel = f'{uur}:00-{tot}:00 &middot; {_mm(mm)} mm &middot; {round(b["kans"] or 0)}% kans'
         kolommen.append(f'<div class="regen-kolom" title="{titel}">'
                         f'<div class="regen-vak">{staaf}</div>'
+                        f'<span class="regen-mm{" is-leeg" if leeg else ""}">'
+                        f'{"0" if leeg else _mm(mm)}</span>'
                         f'<span class="regen-uur">{uur}</span></div>')
         voorlezen.append(f"{uur}:00 {_mm(mm)} mm")
 
@@ -482,7 +487,16 @@ body {
   white-space: nowrap;
 }
 .regen-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
-.regen-kolom { display: flex; flex-direction: column; gap: .25rem; }
+.regen-kolom { display: flex; flex-direction: column; gap: .18rem; }
+.regen-mm {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .58rem;
+  line-height: 1.2;
+  color: var(--nat);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.regen-mm.is-leeg { color: var(--gedempt); opacity: .55; }
 .regen-vak {
   height: 34px;
   display: flex;
