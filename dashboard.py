@@ -550,7 +550,8 @@ def bouw_pagina(dagen, opgehaald):
         # Alleen "vannacht" als het ook echt vannacht is; anders staat er een
         # nacht van dagen later onder een kop die vandaag belooft.
         label = ("Vannacht om 03:00" if eerste["datum"] == vandaag
-                 else f"Eerste nacht &middot; {nl_datum(eerste['datum'])}, 03:00")
+                 else (f"Eerste nacht &middot; {eerste['datum'].day} "
+                       f"{MAANDEN_NL[eerste['datum'].month - 1]}, 03:00"))
         samenvatting = (
             f'<section class="vannacht">'
             f'<div class="vannacht-getal" style="--tl:{licht};--td:{donker}">'

@@ -699,7 +699,7 @@ function samenvatting(dagen, vandaagIso) {
   // van dagen later onder een kop die vandaag belooft.
   const label = eerste.datum === vandaagIso
     ? "Vannacht om 03:00"
-    : `Eerste nacht &middot; ${nlDatum(eerste.datum)}, 03:00`;
+    : `Eerste nacht &middot; ${uitIso(eerste.datum).getDate()} ${MAANDEN_NL[uitIso(eerste.datum).getMonth()]}, 03:00`;
   return `<section class="vannacht">
     <div class="vannacht-getal" style="--tl:${licht};--td:${donker}">${toonTemp(eerste.nacht.temp)}<span class="graad">&deg;</span></div>
     <div class="vannacht-tekst">
