@@ -90,9 +90,14 @@ const TEMP_SCHAAL = __TEMP_SCHAAL__;
 const DAGEN_NL = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
 const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
                     "augustus", "september", "oktober", "november", "december"];
+const DAGEN_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"];
+const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul",
+                      "aug", "sep", "okt", "nov", "dec"];
 const REIS_START = "2026-09-04";
 const REIS_EIND = "2026-09-27";
+// Vijf dagen met alle details, daarna nog vijf als ruwe vooruitblik.
 const DAGEN_VOORUIT = 5;
+const DAGEN_TOTAAL = 10;
 const OPSLAG_SLEUTEL = "weerpost-laatste";
 
 // ---- datumhulpjes, allemaal in lokale tijd ----
@@ -104,6 +109,11 @@ function nlDatum(iso) {
   const d = uitIso(iso);
   const wd = (d.getDay() + 6) % 7;  // zondag=0 omzetten naar maandag=0
   return `${DAGEN_NL[wd]} ${d.getDate()} ${MAANDEN_NL[d.getMonth()]}`;
+}
+
+function kortDatum(iso) {
+  const d = uitIso(iso);
+  return `${DAGEN_KORT[(d.getDay() + 6) % 7]} ${d.getDate()} ${MAANDEN_KORT[d.getMonth()]}`;
 }
 
 function reisdagNummer(iso) {
@@ -177,7 +187,7 @@ function regenBlokken(vp, iso) {
 async function bouwDagen() {
   const vandaag = new Date();
   const gevraagd = [];
-  for (let i = 0; i < DAGEN_VOORUIT; i++) gevraagd.push(isoDatum(plusDagen(vandaag, i)));
+  for (let i = 0; i < DAGEN_TOTAAL; i++) gevraagd.push(isoDatum(plusDagen(vandaag, i)));
 
   // Groepeer per plaats: een aanroep per locatie in plaats van per dag.
   const groepen = new Map();
@@ -219,9 +229,9 @@ async function bouwDagen() {
 }
 
 // ---- weergave ----
-function icoon(soort) {
+function icoon(soort, klasse = "ikoon") {
   const pad = IKONEN[soort] || IKONEN["bewolkt"];
-  return `<svg class="ikoon" viewBox="0 0 24 25" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${pad}</svg>`;
+  return `<svg class="${klasse}" viewBox="0 0 24 25" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${pad}</svg>`;
 }
 
 const toonMm = (v) => v.toFixed(1).replace(".", ",");
@@ -327,6 +337,35 @@ function kaart(dag, vandaagIso) {
   </article>`;
 }
 
+function vooruitblik(dagen) {
+  // Bewust karig van vorm: op deze afstand is het een richting, geen planning.
+  const rijen = dagen.filter((d) => d.etappe).map((dag) => {
+    const [omschrijving, soort] = WEER[String(dag.code)] || ["Onbekend", "bewolkt"];
+    const mm = dag.neerslag_mm || 0;
+    const droog = mm < 0.2;
+    const [licht, donker] = tempKleuren(dag.max_temp);
+    return `<div class="blik-rij">
+      <div class="blik-links">
+        <span class="blik-datum">${kortDatum(dag.datum)}</span>
+        <span class="blik-plek">${ontsnap(dag.etappe.plaats)}</span>
+      </div>
+      <div class="blik-rechts">
+        <span class="blik-icoon" title="${ontsnap(omschrijving)}">${icoon(soort, "ikoon-klein")}</span>
+        <span class="blik-temp" style="--tl:${licht};--td:${donker}">${toonTemp(dag.max_temp)}<span class="graad">&deg;</span></span>
+        <span class="blik-regen${droog ? " is-droog" : ""}">${droog ? "0" : toonMm(mm)} mm</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  if (!rijen) return "";
+  return `<section class="blik">
+    <div class="blik-kop">
+      <span class="blik-titel">Vooruitblik</span>
+      <span class="blik-toelichting">richting, geen planning</span>
+    </div>${rijen}
+  </section>`;
+}
+
 function samenvatting(dagen, vandaagIso) {
   const eerste = dagen.find((d) => d.etappe && d.nacht);
   if (!eerste) return "";
@@ -351,7 +390,9 @@ function samenvatting(dagen, vandaagIso) {
 function teken(dagen, opgehaaldOp, uitOpslag) {
   const vandaagIso = isoDatum(new Date());
   document.getElementById("inhoud").innerHTML =
-    samenvatting(dagen, vandaagIso) + dagen.map((d) => kaart(d, vandaagIso)).join("");
+    samenvatting(dagen, vandaagIso)
+    + dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
+    + vooruitblik(dagen.slice(DAGEN_VOORUIT));
 
   const stempel = new Date(opgehaaldOp);
   const wanneer = `${String(stempel.getDate()).padStart(2, "0")}-${String(stempel.getMonth() + 1).padStart(2, "0")} om ${String(stempel.getHours()).padStart(2, "0")}:${String(stempel.getMinutes()).padStart(2, "0")}`;
@@ -445,7 +486,7 @@ def bouw():
       </div>
       <button type="button" id="ververs" class="ververs">Ververs</button>
     </div>
-    <p class="bijschrift">4 t/m 27 september. Vijf dagen vooruit, steeds voor de camping waar je die nacht staat.</p>
+    <p class="bijschrift">4 t/m 27 september. Vijf dagen in detail, daarna vijf op hoofdlijnen &mdash; steeds voor de camping waar je die nacht staat.</p>
   </header>
 
   <div id="melding" class="balkje" hidden></div>

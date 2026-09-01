@@ -1,8 +1,10 @@
 # Pyreneeën Weerpost
 
 Weerdashboard voor de Pyreneeënreis van 4 t/m 27 september 2026. Toont vijf
-dagen vooruit, steeds voor de camping waar we die nacht staan: neerslag, en de
-temperatuur om 15:00, 21:00 en 03:00 in de nacht erna.
+dagen in detail, steeds voor de camping waar we die nacht staan: neerslag per
+blok van twee uur, en de temperatuur om 15:00, 21:00 en 03:00 in de nacht
+erna. Daarna volgen nog vijf dagen als ruwe vooruitblik met alleen de warmste
+piek en de neerslag; verder dan tien dagen lopen de modellen te ver uiteen.
 
 De pagina haalt de verwachting zelf op bij [Open-Meteo](https://open-meteo.com)
 zodra je hem opent. Er is dus geen server, geen sleutel en geen geplande taak

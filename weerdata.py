@@ -14,7 +14,11 @@ from datetime import date, datetime, time, timedelta
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIJDZONE = "Europe/Paris"
+
+# Vijf dagen met alle details, daarna nog vijf als ruwe vooruitblik. Verder dan
+# tien dagen heeft geen zin: dan lopen de modellen zo uiteen dat het ruis wordt.
 DAGEN_VOORUIT = 5
+DAGEN_TOTAAL = 10
 
 # Beginuren van de blokken van twee uur waarin we de dag opdelen, zodat je ziet
 # op welk moment de neerslag valt. Het laatste blok loopt door tot middernacht.
@@ -95,7 +99,7 @@ def regen_blokken(vp, d):
     return blokken
 
 
-def bouw_dagen(route, vandaag=None, dagen=DAGEN_VOORUIT):
+def bouw_dagen(route, vandaag=None, dagen=DAGEN_TOTAAL):
     vandaag = vandaag or date.today()
     kalender = route_naar_kalender(route)
     gevraagd = [vandaag + timedelta(days=i) for i in range(dagen)]

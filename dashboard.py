@@ -10,6 +10,9 @@ import weerdata
 DAGEN_NL = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
               "augustus", "september", "oktober", "november", "december"]
+DAGEN_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"]
+MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul",
+                "aug", "sep", "okt", "nov", "dec"]
 
 # WMO-weercodes naar een korte omschrijving en een icoonsoort.
 WEER = {
@@ -67,6 +70,10 @@ def temp_kleuren(t):
 
 def nl_datum(d):
     return f"{DAGEN_NL[d.weekday()]} {d.day} {MAANDEN_NL[d.month - 1]}"
+
+
+def kort_datum(d):
+    return f"{DAGEN_KORT[d.weekday()]} {d.day} {MAANDEN_KORT[d.month - 1]}"
 
 
 def reisdag_nummer(d):
@@ -130,6 +137,47 @@ def regenstrip(blokken, dagtotaal=0):
             f'aria-label="Neerslag per twee uur: {html.escape(", ".join(voorlezen))}">'
             + "".join(kolommen)
             + f'</div></div>')
+
+
+def vooruitblik(dagen):
+    """Ruwe vooruitblik voor dag 6 tot en met 10: alleen plek, piek en regen.
+
+    Bewust karig van vorm. Op deze afstand is de voorspelling een richting,
+    geen planning, en dat mag je aan de opmaak kunnen zien.
+    """
+    rijen = []
+    for dag in dagen:
+        etappe = dag.get("etappe")
+        if not etappe:
+            continue
+        omschrijving, soort = WEER.get(dag["code"], ("Onbekend", "bewolkt"))
+        mm = dag.get("neerslag_mm") or 0
+        droog = mm < 0.2
+        licht, donker = temp_kleuren(dag.get("max_temp"))
+        rijen.append(
+            f'<div class="blik-rij">'
+            f'<div class="blik-links">'
+            f'<span class="blik-datum">{kort_datum(dag["datum"])}</span>'
+            f'<span class="blik-plek">{html.escape(etappe["plaats"])}</span>'
+            f'</div>'
+            f'<div class="blik-rechts">'
+            f'<span class="blik-icoon" title="{html.escape(omschrijving)}">'
+            f'{icoon(soort, "ikoon-klein")}</span>'
+            f'<span class="blik-temp" style="--tl:{licht};--td:{donker}">'
+            f'{_temp(dag.get("max_temp"))}<span class="graad">&deg;</span></span>'
+            f'<span class="blik-regen{" is-droog" if droog else ""}">'
+            f'{"0" if droog else _mm(mm)} mm</span>'
+            f'</div></div>'
+        )
+    if not rijen:
+        return ""
+    return (f'<section class="blik">'
+            f'<div class="blik-kop">'
+            f'<span class="blik-titel">Vooruitblik</span>'
+            f'<span class="blik-toelichting">richting, geen planning</span>'
+            f'</div>'
+            + "".join(rijen)
+            + f'</section>')
 
 
 def blok_tijdstip(label, toelichting, meting, nadruk=False):
@@ -462,6 +510,63 @@ body {
   color: var(--gedempt);
 }
 
+/* ---- Vooruitblik dag 6 t/m 10 ---- */
+.blik {
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-radius: 4px;
+  padding: .9rem 1.1rem 1rem;
+  box-shadow: var(--schaduw);
+}
+.blik-kop {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  flex-wrap: wrap;
+  padding-bottom: .5rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .67rem;
+}
+.blik-titel {
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.blik-toelichting { color: var(--gedempt); }
+.blik-rij {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .55rem 0;
+  border-top: 1px solid var(--lijn);
+}
+.blik-links { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
+.blik-datum {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .67rem;
+  color: var(--gedempt);
+}
+.blik-plek {
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: .98rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.blik-rechts {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  flex: none;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.blik-icoon { color: var(--gedempt); display: flex; }
+.ikoon-klein { width: 1.3rem; height: 1.3rem; display: block; }
+.blik-temp { font-size: 1.15rem; font-weight: 500; color: var(--tl); }
+.blik-regen { font-size: .73rem; color: var(--nat); min-width: 3.4em; text-align: right; }
+.blik-regen.is-droog { color: var(--gedempt); }
+
 .spoor {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr;
@@ -515,9 +620,11 @@ body {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .stop-temp,
+  :root:not([data-theme="light"]) .blik-temp,
   :root:not([data-theme="light"]) .vannacht-getal { color: var(--td); }
 }
 :root[data-theme="dark"] .stop-temp,
+:root[data-theme="dark"] .blik-temp,
 :root[data-theme="dark"] .vannacht-getal { color: var(--td); }
 
 .voet {
@@ -565,7 +672,8 @@ def bouw_pagina(dagen, opgehaald):
     else:
         samenvatting = ""
 
-    kaarten = "\n  ".join(kaart(d, vandaag) for d in dagen)
+    kaarten = "\n  ".join(kaart(d, vandaag) for d in dagen[:weerdata.DAGEN_VOORUIT])
+    blik = vooruitblik(dagen[weerdata.DAGEN_VOORUIT:])
     stempel = opgehaald.strftime("%d-%m-%Y om %H:%M")
 
     return f"""<title>Pyreneeën Weerpost</title>
@@ -578,12 +686,14 @@ def bouw_pagina(dagen, opgehaald):
   <header class="titelblok">
     <span class="reis">Pyreneeën 2026 &middot; 4 t/m 27 september</span>
     <h1>Weer op de slaapplek</h1>
-    <p class="bijschrift">Vijf dagen vooruit, steeds voor de camping waar je die nacht staat.</p>
+    <p class="bijschrift">Vijf dagen in detail, daarna vijf op hoofdlijnen &mdash; steeds voor de camping waar je die nacht staat.</p>
   </header>
 
   {samenvatting}
 
   {kaarten}
+
+  {blik}
 
   <footer class="voet">
     Bijgewerkt op {stempel} &middot; bron Open-Meteo<br>
