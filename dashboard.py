@@ -645,6 +645,45 @@ body {
 """
 
 
+APP_URL = "https://stijnbrasse-lab.github.io/weerpost/"
+
+# Alleen voor de ingebakken reservekopie. De app heeft dit niet nodig: die
+# ververst zichzelf en weet dus altijd hoe oud zijn cijfers zijn.
+CSS_RESERVE = """
+.verouderd {
+  padding: .85rem 1rem;
+  border-radius: 4px;
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--schaduw);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .72rem;
+  line-height: 1.6;
+  color: var(--gedempt);
+}
+.verouderd[hidden] { display: none; }
+.verouderd a { color: var(--accent); }
+.voet a { color: var(--accent); }
+"""
+
+# Let op: dit script wordt bewust in puur ASCII geschreven. De pagina gaat er
+# met tekenentiteiten uit, en die worden binnen een script-blok niet ontleed.
+SCRIPT_RESERVE = """
+(function () {
+  var gemaakt = new Date("%s");
+  var uren = (Date.now() - gemaakt.getTime()) / 3600000;
+  if (!(uren >= 36)) return;
+  var el = document.getElementById("verouderd");
+  if (!el) return;
+  var dagen = Math.round(uren / 24);
+  el.innerHTML = "Deze reservekopie is " + dagen + " dagen oud en wordt nu niet "
+    + "ververst. Open <a href=\\"%s\\">de app</a> voor de actuele verwachting.";
+  el.hidden = false;
+})();
+"""
+
+
 def bouw_pagina(dagen, opgehaald):
     vandaag = dagen[0]["datum"]
 
@@ -680,7 +719,7 @@ def bouw_pagina(dagen, opgehaald):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans+Condensed:wght@600&amp;family=IBM+Plex+Sans:wght@400;500&amp;display=swap">
-<style>{CSS}</style>
+<style>{CSS}{CSS_RESERVE}</style>
 
 <main class="omslag">
   <header class="titelblok">
@@ -688,6 +727,8 @@ def bouw_pagina(dagen, opgehaald):
     <h1>Weer op de slaapplek</h1>
     <p class="bijschrift">Vijf dagen in detail, daarna vijf op hoofdlijnen &mdash; steeds voor de camping waar je die nacht staat.</p>
   </header>
+
+  <div id="verouderd" class="verouderd" hidden></div>
 
   {samenvatting}
 
@@ -697,9 +738,11 @@ def bouw_pagina(dagen, opgehaald):
 
   <footer class="voet">
     Bijgewerkt op {stempel} &middot; bron Open-Meteo<br>
-    Alle tijden zijn lokale tijd. 03:00 is de nacht na de genoemde dag.
+    Alle tijden zijn lokale tijd. 03:00 is de nacht na de genoemde dag.<br>
+    Dit is de reservekopie &middot; <a href="{APP_URL}">open de app</a>
   </footer>
 </main>
+<script>{SCRIPT_RESERVE % (opgehaald.strftime("%Y-%m-%dT%H:%M:%S"), APP_URL)}</script>
 """
 
 
