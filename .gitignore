@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+# Gegenereerde varianten die niet online hoeven.
+dashboard.html
+preview*.html
+route.kml

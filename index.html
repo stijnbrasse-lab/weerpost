@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pyreneeën Weerpost</title>
+<meta name="description" content="Weersverwachting vijf dagen vooruit voor de camping waar we die nacht staan.">
+<meta name="theme-color" content="#E9ECEF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1218" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icoon-180.png">
+<link rel="icon" href="icoon-192.png" type="image/png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Weerpost">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans+Condensed:wght@600&amp;family=IBM+Plex+Sans:wght@400;500&amp;display=swap">
+<style>
+:root {
+  --grond: #E9ECEF;
+  --kaart: #FFFFFF;
+  --kaart-2: #F1F4F7;
+  --inkt: #141A20;
+  --gedempt: #5B6874;
+  --lijn: #D3D9DF;
+  --accent: #8F6115;
+  --nat: #2F6FA6;
+  --nat-zacht: rgba(47, 111, 166, .16);
+  --schaduw: 0 1px 2px rgba(20, 26, 32, .06), 0 8px 20px -12px rgba(20, 26, 32, .3);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --grond: #0D1218;
+    --kaart: #151C23;
+    --kaart-2: #1B232B;
+    --inkt: #E4EAF0;
+    --gedempt: #8794A1;
+    --lijn: #28313A;
+    --accent: #D7A24A;
+    --nat: #6FAEE0;
+    --nat-zacht: rgba(111, 174, 224, .18);
+    --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
+  }
+}
+:root[data-theme="dark"] {
+  --grond: #0D1218;
+  --kaart: #151C23;
+  --kaart-2: #1B232B;
+  --inkt: #E4EAF0;
+  --gedempt: #8794A1;
+  --lijn: #28313A;
+  --accent: #D7A24A;
+  --nat: #6FAEE0;
+  --nat-zacht: rgba(111, 174, 224, .18);
+  --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--grond);
+  color: var(--inkt);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.omslag {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.titelblok { display: flex; flex-direction: column; gap: .3rem; }
+.titelblok .reis {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .69rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.titelblok h1 {
+  margin: 0;
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.titelblok .bijschrift { margin: 0; color: var(--gedempt); font-size: .88rem; }
+
+.vannacht {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: var(--schaduw);
+}
+.vannacht-getal {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 2.6rem;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--tl);
+  flex: none;
+}
+.vannacht-tekst { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
+.vannacht-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .67rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gedempt);
+}
+.vannacht-plek {
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.vannacht-extra {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .74rem;
+  color: var(--gedempt);
+}
+
+.kaart {
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-radius: 4px;
+  padding: 1rem 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  box-shadow: var(--schaduw);
+}
+.kaart-vandaag { border-left: 3px solid var(--accent); }
+.kaart-leeg { color: var(--gedempt); }
+.leeg-tekst { margin: 0; font-size: .9rem; }
+
+.kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .2rem .75rem;
+  flex-wrap: wrap;
+}
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .67rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.datum {
+  font-size: .8rem;
+  color: var(--gedempt);
+  text-align: right;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.plek { display: flex; flex-direction: column; gap: .1rem; }
+.plek-naam {
+  margin: 0;
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.plek-regio {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .73rem;
+  color: var(--gedempt);
+}
+.notitie {
+  margin: 0;
+  font-size: .84rem;
+  color: var(--gedempt);
+  padding-left: .7rem;
+  border-left: 2px solid var(--lijn);
+}
+
+.weer { display: flex; align-items: flex-start; gap: .85rem; }
+.weer-icoon { color: var(--gedempt); flex: none; padding-top: .1rem; }
+.ikoon { width: 2.1rem; height: 2.1rem; display: block; }
+.weer-tekst { display: flex; flex-direction: column; gap: .28rem; flex: 1; min-width: 0; }
+.weer-omschrijving {
+  font-size: .94rem;
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.dagmax {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .74rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--gedempt);
+}
+.neerslag {
+  display: flex;
+  align-items: baseline;
+  gap: .55rem;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.neerslag-mm { font-size: 1.05rem; font-weight: 500; color: var(--nat); }
+.neerslag-mm.is-droog { color: var(--gedempt); }
+.neerslag-kans { font-size: .74rem; color: var(--gedempt); }
+.balk { height: 4px; background: var(--nat-zacht); border-radius: 2px; overflow: hidden; }
+.balk-vulling { height: 100%; background: var(--nat); border-radius: 2px; }
+
+.spoor {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: .25rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--lijn);
+}
+.stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .12rem;
+  padding: .45rem .15rem;
+  border-radius: 3px;
+  text-align: center;
+}
+.stop-nadruk { background: var(--kaart-2); }
+.stop-tijd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .69rem;
+  letter-spacing: .07em;
+  color: var(--gedempt);
+}
+.stop-temp {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 1.65rem;
+  font-weight: 500;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--tl);
+}
+.graad { font-size: .78em; opacity: .5; }
+.stop-uitleg { font-size: .67rem; color: var(--gedempt); line-height: 1.25; }
+.pijl {
+  align-self: center;
+  width: 10px;
+  height: 1px;
+  background: var(--lijn);
+  position: relative;
+}
+.pijl::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -2px;
+  border-left: 4px solid var(--lijn);
+  border-top: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .stop-temp,
+  :root:not([data-theme="light"]) .vannacht-getal { color: var(--td); }
+}
+:root[data-theme="dark"] .stop-temp,
+:root[data-theme="dark"] .vannacht-getal { color: var(--td); }
+
+.voet {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .69rem;
+  color: var(--gedempt);
+  line-height: 1.7;
+  border-top: 1px solid var(--lijn);
+  padding-top: .9rem;
+}
+
+@media (max-width: 380px) {
+  .titelblok h1 { font-size: 1.75rem; }
+  .plek-naam { font-size: 1.3rem; }
+  .stop-temp { font-size: 1.4rem; }
+  .vannacht-getal { font-size: 2.2rem; }
+}
+
+.balkje {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .6rem .8rem;
+  border-radius: 4px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .72rem;
+  line-height: 1.5;
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  color: var(--gedempt);
+}
+.balkje-waarschuwing { border-left: 3px solid var(--accent); }
+.balkje[hidden] { display: none; }
+
+.kopregel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ververs {
+  flex: none;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--lijn);
+  border-radius: 3px;
+  padding: .45rem .7rem;
+  cursor: pointer;
+  transition: border-color .15s ease;
+}
+.ververs:hover { border-color: var(--accent); }
+.ververs:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ververs[disabled] { opacity: .5; cursor: default; }
+
+.laden {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: var(--gedempt);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .78rem;
+}
+.laden-punt {
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin: 0 2px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulseren 1.2s ease-in-out infinite;
+}
+.laden-punt:nth-child(2) { animation-delay: .15s; }
+.laden-punt:nth-child(3) { animation-delay: .3s; }
+@keyframes pulseren {
+  0%, 100% { opacity: .25; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .laden-punt { animation: none; opacity: .6; }
+  .ververs { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="omslag">
+  <header class="titelblok">
+    <div class="kopregel">
+      <div>
+        <span class="reis">Pyreneeën 2026</span>
+        <h1>Weer op de slaapplek</h1>
+      </div>
+      <button type="button" id="ververs" class="ververs">Ververs</button>
+    </div>
+    <p class="bijschrift">4 t/m 27 september. Vijf dagen vooruit, steeds voor de camping waar je die nacht staat.</p>
+  </header>
+
+  <div id="melding" class="balkje" hidden></div>
+
+  <div id="inhoud">
+    <div class="laden">
+      Verwachting ophalen
+      <span class="laden-punt"></span><span class="laden-punt"></span><span class="laden-punt"></span>
+    </div>
+  </div>
+
+  <footer class="voet">
+    <span id="stempel">Nog niet opgehaald</span> &middot; bron Open-Meteo<br>
+    Alle tijden zijn lokale tijd. 03:00 is de nacht na de genoemde dag.
+  </footer>
+</main>
+<script>
+const ROUTE = [{"plaats": "Thuis, Groningen", "lat": 53.22026, "lon": 6.56534, "van": "2026-08-01", "tot": "2026-09-03", "land": "Nederland"}, {"plaats": "Camping Maka", "lat": 49.81113, "lon": 5.17507, "van": "2026-09-04", "tot": "2026-09-04", "land": "Bertrix, België"}, {"plaats": "Domaine Les Gandins", "lat": 46.19339, "lon": 3.24323, "van": "2026-09-05", "tot": "2026-09-05", "land": "Saint-Germain-de-Salles, Frankrijk"}, {"plaats": "Les Criques de Porteils", "lat": 42.53408, "lon": 3.06799, "van": "2026-09-06", "tot": "2026-09-08", "land": "Argeles-sur-Mer, Frankrijk"}, {"plaats": "Camping Port de la Vall", "lat": 42.34264, "lon": 3.18499, "van": "2026-09-09", "tot": "2026-09-09", "land": "El Port de la Selva, Spanje"}, {"plaats": "Camping Can Fosses", "lat": 42.32241, "lon": 2.10378, "van": "2026-09-10", "tot": "2026-09-10", "land": "Planoles, Spanje"}, {"plaats": "Camping El Cortal del Gral", "lat": 42.41662, "lon": 1.67329, "van": "2026-09-11", "tot": "2026-09-12", "land": "Alt Urgell, Spanje"}, {"plaats": "Camping Frontera Park", "lat": 42.42846, "lon": 1.46346, "van": "2026-09-13", "tot": "2026-09-13", "land": "Les Valls de Valira, Spanje"}, {"plaats": "Camping La Mola", "lat": 42.57021, "lon": 1.10773, "van": "2026-09-14", "tot": "2026-09-14", "land": "Espot, Spanje"}, {"plaats": "Camping Baliera", "lat": 42.43927, "lon": 0.7009, "van": "2026-09-15", "tot": "2026-09-15", "land": "Bonansa, Spanje"}, {"plaats": "Camping Aneto", "lat": 42.62476, "lon": 0.54475, "van": "2026-09-16", "tot": "2026-09-18", "land": "Benasque, Spanje"}, {"plaats": "Camping Pineta", "lat": 42.65113, "lon": 0.14096, "van": "2026-09-19", "tot": "2026-09-19", "land": "Bielsa, Spanje"}, {"plaats": "Camping Selva de Oza", "lat": 42.83508, "lon": -0.70963, "van": "2026-09-20", "tot": "2026-09-20", "land": "Valle de Hecho, Spanje"}, {"plaats": "Camping Le Bord de Mer", "lat": 43.40665, "lon": -1.64239, "van": "2026-09-21", "tot": "2026-09-23", "land": "Hendaye, Frankrijk"}, {"plaats": "Chateauroux", "lat": 46.80917, "lon": 1.70405, "van": "2026-09-24", "tot": "2026-09-24", "land": "Frankrijk"}, {"plaats": "Camping Prahay", "lat": 49.81377, "lon": 5.01405, "van": "2026-09-25", "tot": "2026-09-25", "land": "Bouillon, België"}, {"plaats": "Thuis, Groningen", "lat": 53.22026, "lon": 6.56534, "van": "2026-09-26", "tot": "2026-12-31", "land": "Nederland"}];
+const NOTITIES = {"2026-09-04": "Vertrek uit Groningen, 500 km snelweg", "2026-09-05": "536 km, tolwegen vermijden", "2026-09-06": "549 km naar de Middellandse Zee", "2026-09-07": "Rustdag - zwemmen in de Middellandse Zee", "2026-09-08": "Rustdag - zwemmen in de Middellandse Zee", "2026-09-09": "45 km langs de kust Spanje in", "2026-09-10": "150 km, laatste deel off road", "2026-09-11": "120 km off road", "2026-09-12": "Rustdag - hiken", "2026-09-13": "60 km off road, hoogste punt van de reis", "2026-09-14": "110 km off road", "2026-09-15": "136 km off road", "2026-09-16": "90 km off road", "2026-09-17": "Rustdag - hiken", "2026-09-18": "Rustdag - hiken", "2026-09-19": "100 km off road", "2026-09-20": "180 km off road", "2026-09-21": "200 km off road naar de oceaan", "2026-09-22": "Rustdag - zwemmen in de oceaan", "2026-09-23": "Surfen", "2026-09-24": "500 km richting huis", "2026-09-25": "500 km", "2026-09-26": "500 km, thuis in Groningen"};
+const WEER = {"0": ["Helder", "zon"], "1": ["Overwegend helder", "zon"], "2": ["Half bewolkt", "halfbewolkt"], "3": ["Bewolkt", "bewolkt"], "45": ["Mist", "mist"], "48": ["Aanvriezende mist", "mist"], "51": ["Lichte motregen", "motregen"], "53": ["Motregen", "motregen"], "55": ["Dichte motregen", "motregen"], "56": ["IJzelmotregen", "motregen"], "57": ["Dichte ijzelmotregen", "motregen"], "61": ["Lichte regen", "regen"], "63": ["Regen", "regen"], "65": ["Zware regen", "regen"], "66": ["IJzelregen", "regen"], "67": ["Zware ijzelregen", "regen"], "71": ["Lichte sneeuw", "sneeuw"], "73": ["Sneeuw", "sneeuw"], "75": ["Zware sneeuw", "sneeuw"], "77": ["Sneeuwkorrels", "sneeuw"], "80": ["Lichte buien", "buien"], "81": ["Buien", "buien"], "82": ["Zware buien", "buien"], "85": ["Sneeuwbuien", "sneeuw"], "86": ["Zware sneeuwbuien", "sneeuw"], "95": ["Onweer", "onweer"], "96": ["Onweer met hagel", "onweer"], "99": ["Zwaar onweer met hagel", "onweer"]};
+const IKONEN = {"zon": "<circle cx=\"12\" cy=\"12\" r=\"5\"/><g stroke-linecap=\"round\"><path d=\"M12 1.5v2.5M12 20v2.5M22.5 12H20M4 12H1.5M19.4 4.6l-1.8 1.8M6.4 17.6l-1.8 1.8M19.4 19.4l-1.8-1.8M6.4 6.4L4.6 4.6\"/></g>", "halfbewolkt": "<circle cx=\"8.5\" cy=\"8\" r=\"3.4\"/><g stroke-linecap=\"round\"><path d=\"M8.5 1.4v1.8M14.6 8h-1.8M4.2 8H2.4M12.8 3.7l-1.3 1.3M5.5 11l-1.3 1.3M12.8 12.3l-1.3-1.3M4.2 3.7L5.5 5\"/></g><path d=\"M9 20.5h8.5a3.5 3.5 0 0 0 .3-7 5 5 0 0 0-9.4-1.2A3.6 3.6 0 0 0 9 20.5z\" fill=\"var(--kaart)\"/>", "bewolkt": "<path d=\"M7.5 19.5h9.5a4 4 0 0 0 .3-8 5.6 5.6 0 0 0-10.6-1.3A4.1 4.1 0 0 0 7.5 19.5z\"/>", "mist": "<path d=\"M7.5 14h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 4.7 4.1 4.1 0 0 0 7.5 14z\"/><g stroke-linecap=\"round\"><path d=\"M4 18h16M6.5 21.5h11\"/></g>", "motregen": "<path d=\"M7.5 15.5h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 6.2 4.1 4.1 0 0 0 7.5 15.5z\"/><g stroke-linecap=\"round\"><path d=\"M9.5 19v1.5M14.5 19v1.5\"/></g>", "regen": "<path d=\"M7.5 14.5h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 5.2 4.1 4.1 0 0 0 7.5 14.5z\"/><g stroke-linecap=\"round\"><path d=\"M8.5 17.5l-1 4M13 17.5l-1 4M17.5 17.5l-1 4\"/></g>", "buien": "<path d=\"M7.5 14.5h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 5.2 4.1 4.1 0 0 0 7.5 14.5z\"/><g stroke-linecap=\"round\"><path d=\"M8.5 17.5l-1 3M13 17.5l-1 3M17.5 17.5l-1 3M10.7 21.5l-.5 1.5M15.2 21.5l-.5 1.5\"/></g>", "sneeuw": "<path d=\"M7.5 14.5h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 5.2 4.1 4.1 0 0 0 7.5 14.5z\"/><g stroke-linecap=\"round\"><path d=\"M9 18.5v3M7.7 19.2l2.6 1.6M10.3 19.2l-2.6 1.6M15.5 18.5v3M14.2 19.2l2.6 1.6M16.8 19.2l-2.6 1.6\"/></g>", "onweer": "<path d=\"M7.5 14.5h9.5a4 4 0 0 0 .3-8A5.6 5.6 0 0 0 6.7 5.2 4.1 4.1 0 0 0 7.5 14.5z\"/><path d=\"M13 17l-3.5 4.5h3L11 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"};
+const TEMP_SCHAAL = [[0, "#16457C", "#7FB4EC"], [7, "#2A6A9E", "#8CC3EA"], [13, "#3A7E8E", "#86C5CE"], [19, "#6B7A5E", "#B7BFA4"], [25, "#A8721B", "#E3B45E"], [99, "#B24327", "#F08E6C"]];
+
+const DAGEN_NL = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
+const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
+                    "augustus", "september", "oktober", "november", "december"];
+const REIS_START = "2026-09-04";
+const REIS_EIND = "2026-09-27";
+const DAGEN_VOORUIT = 5;
+const OPSLAG_SLEUTEL = "weerpost-laatste";
+
+// ---- datumhulpjes, allemaal in lokale tijd ----
+const isoDatum = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const plusDagen = (d, n) => { const k = new Date(d); k.setDate(k.getDate() + n); return k; };
+const uitIso = (s) => { const [j, m, d] = s.split("-").map(Number); return new Date(j, m - 1, d); };
+
+function nlDatum(iso) {
+  const d = uitIso(iso);
+  const wd = (d.getDay() + 6) % 7;  // zondag=0 omzetten naar maandag=0
+  return `${DAGEN_NL[wd]} ${d.getDate()} ${MAANDEN_NL[d.getMonth()]}`;
+}
+
+function reisdagNummer(iso) {
+  if (iso < REIS_START || iso > REIS_EIND) return null;
+  return Math.round((uitIso(iso) - uitIso(REIS_START)) / 86400000) + 1;
+}
+
+function etappeVoor(iso) {
+  return ROUTE.find((e) => iso >= e.van && iso <= e.tot) || null;
+}
+
+function tempKleuren(t) {
+  if (t === null || t === undefined) return ["var(--gedempt)", "var(--gedempt)"];
+  for (const [grens, licht, donker] of TEMP_SCHAAL) {
+    if (t <= grens) return [licht, donker];
+  }
+  const laatste = TEMP_SCHAAL[TEMP_SCHAAL.length - 1];
+  return [laatste[1], laatste[2]];
+}
+
+const ontsnap = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const toonTemp = (t) => (t === null || t === undefined) ? "--" : String(Math.round(t));
+
+// ---- data ophalen ----
+async function haalVoorspelling(etappe, start, eind) {
+  const p = new URLSearchParams({
+    latitude: etappe.lat,
+    longitude: etappe.lon,
+    hourly: "temperature_2m,precipitation,precipitation_probability,weather_code",
+    daily: "precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code",
+    start_date: start,
+    end_date: eind,
+    timezone: "Europe/Paris",
+  });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`Open-Meteo gaf status ${r.status}`);
+  return r.json();
+}
+
+function opUur(vp, isoDag, uur) {
+  const sleutel = `${isoDag}T${String(uur).padStart(2, "0")}:00`;
+  const i = vp.hourly.time.indexOf(sleutel);
+  if (i === -1) return null;
+  return {
+    temp: vp.hourly.temperature_2m[i],
+    kans: vp.hourly.precipitation_probability[i],
+    code: vp.hourly.weather_code[i],
+  };
+}
+
+async function bouwDagen() {
+  const vandaag = new Date();
+  const gevraagd = [];
+  for (let i = 0; i < DAGEN_VOORUIT; i++) gevraagd.push(isoDatum(plusDagen(vandaag, i)));
+
+  // Groepeer per plaats: een aanroep per locatie in plaats van per dag.
+  const groepen = new Map();
+  for (const iso of gevraagd) {
+    const e = etappeVoor(iso);
+    if (!e) continue;
+    if (!groepen.has(e.plaats)) groepen.set(e.plaats, { etappe: e, datums: [] });
+    groepen.get(e.plaats).datums.push(iso);
+  }
+
+  const voorspellingen = new Map();
+  await Promise.all([...groepen.entries()].map(async ([naam, blok]) => {
+    const eerste = blok.datums[0];
+    // Een dag extra, want 03:00 hoort bij de nacht na de laatste dag.
+    const laatste = isoDatum(plusDagen(uitIso(blok.datums[blok.datums.length - 1]), 1));
+    voorspellingen.set(naam, await haalVoorspelling(blok.etappe, eerste, laatste));
+  }));
+
+  return gevraagd.map((iso) => {
+    const etappe = etappeVoor(iso);
+    if (!etappe) return { datum: iso, etappe: null };
+    const vp = voorspellingen.get(etappe.plaats);
+    const i = vp.daily.time.indexOf(iso);
+    const volgende = isoDatum(plusDagen(uitIso(iso), 1));
+    return {
+      datum: iso,
+      etappe,
+      hoogte: vp.elevation,
+      neerslag_mm: vp.daily.precipitation_sum[i],
+      neerslag_kans: vp.daily.precipitation_probability_max[i],
+      code: vp.daily.weather_code[i],
+      max_temp: vp.daily.temperature_2m_max[i],
+      middag: opUur(vp, iso, 15),
+      avond: opUur(vp, iso, 21),
+      nacht: opUur(vp, volgende, 3),
+    };
+  });
+}
+
+// ---- weergave ----
+function icoon(soort) {
+  const pad = IKONEN[soort] || IKONEN["bewolkt"];
+  return `<svg class="ikoon" viewBox="0 0 24 25" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${pad}</svg>`;
+}
+
+function blokTijdstip(label, toelichting, meting, nadruk) {
+  const t = meting ? meting.temp : null;
+  const [licht, donker] = tempKleuren(t);
+  return `<div class="stop${nadruk ? " stop-nadruk" : ""}">
+    <div class="stop-tijd">${label}</div>
+    <div class="stop-temp" style="--tl:${licht};--td:${donker}">${toonTemp(t)}<span class="graad">&deg;</span></div>
+    <div class="stop-uitleg">${toelichting}</div>
+  </div>`;
+}
+
+function kaart(dag, vandaagIso) {
+  const nummer = reisdagNummer(dag.datum);
+  const eyebrow = nummer ? `Dag ${nummer}` : "Voor vertrek";
+  const isVandaag = dag.datum === vandaagIso;
+
+  if (!dag.etappe) {
+    return `<article class="kaart kaart-leeg">
+      <div class="kop"><span class="eyebrow">${eyebrow}</span><span class="datum">${nlDatum(dag.datum)}</span></div>
+      <p class="leeg-tekst">Geen overnachting gepland.</p>
+    </article>`;
+  }
+
+  const [omschrijving, soort] = WEER[String(dag.code)] || ["Onbekend", "bewolkt"];
+  const mm = dag.neerslag_mm || 0;
+  const kans = dag.neerslag_kans || 0;
+  const droog = mm < 0.2;
+  const neerslagTekst = droog ? "0 mm" : `${mm.toFixed(1).replace(".", ",")} mm`;
+  const balk = Math.min(100, (mm / 15) * 100);
+  const notitie = NOTITIES[dag.datum];
+
+  let regio = ontsnap(dag.etappe.land || "");
+  if (dag.hoogte !== undefined && dag.hoogte !== null) regio += ` &middot; ${Math.round(dag.hoogte)} m`;
+
+  return `<article class="kaart${isVandaag ? " kaart-vandaag" : ""}">
+    <div class="kop">
+      <span class="eyebrow">${eyebrow}${isVandaag ? " &middot; vandaag" : ""}</span>
+      <span class="datum">${nlDatum(dag.datum)}</span>
+    </div>
+    <div class="plek">
+      <h2 class="plek-naam">${ontsnap(dag.etappe.plaats)}</h2>
+      <p class="plek-regio">${regio}</p>
+    </div>
+    ${notitie ? `<p class="notitie">${ontsnap(notitie)}</p>` : ""}
+    <div class="weer">
+      <div class="weer-icoon">${icoon(soort)}</div>
+      <div class="weer-tekst">
+        <div class="weer-omschrijving">${ontsnap(omschrijving)}<span class="dagmax">warmste piek ${toonTemp(dag.max_temp)}&deg;</span></div>
+        <div class="neerslag">
+          <span class="neerslag-mm${droog ? " is-droog" : ""}">${neerslagTekst}</span>
+          <span class="neerslag-kans">${Math.round(kans)}% kans op neerslag</span>
+        </div>
+        <div class="balk" role="img" aria-label="Neerslag ${neerslagTekst}">
+          <div class="balk-vulling" style="width:${balk.toFixed(0)}%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="spoor">
+      ${blokTijdstip("15:00", "middag", dag.middag, false)}
+      <span class="pijl" aria-hidden="true"></span>
+      ${blokTijdstip("21:00", "avond", dag.avond, false)}
+      <span class="pijl" aria-hidden="true"></span>
+      ${blokTijdstip("03:00", "nacht erna", dag.nacht, true)}
+    </div>
+  </article>`;
+}
+
+function samenvatting(dagen) {
+  const eerste = dagen.find((d) => d.etappe && d.nacht);
+  if (!eerste) return "";
+  const [licht, donker] = tempKleuren(eerste.nacht.temp);
+  const hoogte = (eerste.hoogte !== undefined && eerste.hoogte !== null)
+    ? `${Math.round(eerste.hoogte)} m boven zeeniveau` : "";
+  return `<section class="vannacht">
+    <div class="vannacht-getal" style="--tl:${licht};--td:${donker}">${toonTemp(eerste.nacht.temp)}<span class="graad">&deg;</span></div>
+    <div class="vannacht-tekst">
+      <span class="vannacht-label">Vannacht om 03:00</span>
+      <span class="vannacht-plek">${ontsnap(eerste.etappe.plaats)}</span>
+      <span class="vannacht-extra">${hoogte}</span>
+    </div>
+  </section>`;
+}
+
+function teken(dagen, opgehaaldOp, uitOpslag) {
+  const vandaagIso = isoDatum(new Date());
+  document.getElementById("inhoud").innerHTML =
+    samenvatting(dagen) + dagen.map((d) => kaart(d, vandaagIso)).join("");
+
+  const stempel = new Date(opgehaaldOp);
+  const wanneer = `${String(stempel.getDate()).padStart(2, "0")}-${String(stempel.getMonth() + 1).padStart(2, "0")} om ${String(stempel.getHours()).padStart(2, "0")}:${String(stempel.getMinutes()).padStart(2, "0")}`;
+
+  const melding = document.getElementById("melding");
+  if (uitOpslag) {
+    melding.hidden = false;
+    melding.className = "balkje balkje-waarschuwing";
+    melding.textContent = `Geen verbinding. Dit is de verwachting van ${wanneer}; trek hem niet te serieus.`;
+  } else {
+    melding.hidden = true;
+  }
+  document.getElementById("stempel").textContent = `Bijgewerkt ${wanneer}`;
+}
+
+async function laden() {
+  const knop = document.getElementById("ververs");
+  knop.disabled = true;
+  try {
+    const dagen = await bouwDagen();
+    const opgehaaldOp = new Date().toISOString();
+    try {
+      localStorage.setItem(OPSLAG_SLEUTEL, JSON.stringify({ dagen, opgehaaldOp }));
+    } catch (e) { /* privemodus of volle opslag: niet erg, alleen geen cache */ }
+    teken(dagen, opgehaaldOp, false);
+  } catch (fout) {
+    let bewaard = null;
+    try { bewaard = JSON.parse(localStorage.getItem(OPSLAG_SLEUTEL) || "null"); } catch (e) {}
+    if (bewaard && bewaard.dagen) {
+      teken(bewaard.dagen, bewaard.opgehaaldOp, true);
+    } else {
+      document.getElementById("inhoud").innerHTML = "";
+      const melding = document.getElementById("melding");
+      melding.hidden = false;
+      melding.className = "balkje balkje-waarschuwing";
+      melding.textContent = "De verwachting kon niet worden opgehaald en er staat nog niets in het geheugen. Probeer het opnieuw zodra je bereik hebt.";
+    }
+  } finally {
+    knop.disabled = false;
+  }
+}
+
+document.getElementById("ververs").addEventListener("click", laden);
+// Bij terugkeren naar de app opnieuw ophalen, zodat je nooit naar oude cijfers kijkt.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) laden(); });
+laden();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* offline-cache is een extraatje */ });
+  });
+}
+</script>
+</body>
+</html>
