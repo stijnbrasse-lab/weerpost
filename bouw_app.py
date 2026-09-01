@@ -327,16 +327,21 @@ function kaart(dag, vandaagIso) {
   </article>`;
 }
 
-function samenvatting(dagen) {
+function samenvatting(dagen, vandaagIso) {
   const eerste = dagen.find((d) => d.etappe && d.nacht);
   if (!eerste) return "";
   const [licht, donker] = tempKleuren(eerste.nacht.temp);
   const hoogte = (eerste.hoogte !== undefined && eerste.hoogte !== null)
     ? `${Math.round(eerste.hoogte)} m boven zeeniveau` : "";
+  // Alleen "vannacht" als het ook echt vannacht is; anders staat er een nacht
+  // van dagen later onder een kop die vandaag belooft.
+  const label = eerste.datum === vandaagIso
+    ? "Vannacht om 03:00"
+    : `Eerste nacht &middot; ${nlDatum(eerste.datum)}, 03:00`;
   return `<section class="vannacht">
     <div class="vannacht-getal" style="--tl:${licht};--td:${donker}">${toonTemp(eerste.nacht.temp)}<span class="graad">&deg;</span></div>
     <div class="vannacht-tekst">
-      <span class="vannacht-label">Vannacht om 03:00</span>
+      <span class="vannacht-label">${label}</span>
       <span class="vannacht-plek">${ontsnap(eerste.etappe.plaats)}</span>
       <span class="vannacht-extra">${hoogte}</span>
     </div>
@@ -346,7 +351,7 @@ function samenvatting(dagen) {
 function teken(dagen, opgehaaldOp, uitOpslag) {
   const vandaagIso = isoDatum(new Date());
   document.getElementById("inhoud").innerHTML =
-    samenvatting(dagen) + dagen.map((d) => kaart(d, vandaagIso)).join("");
+    samenvatting(dagen, vandaagIso) + dagen.map((d) => kaart(d, vandaagIso)).join("");
 
   const stempel = new Date(opgehaaldOp);
   const wanneer = `${String(stempel.getDate()).padStart(2, "0")}-${String(stempel.getMonth() + 1).padStart(2, "0")} om ${String(stempel.getHours()).padStart(2, "0")}:${String(stempel.getMinutes()).padStart(2, "0")}`;

@@ -547,12 +547,16 @@ def bouw_pagina(dagen, opgehaald):
         licht, donker = temp_kleuren(t)
         hoogte = eerste.get("hoogte")
         extra = f"{round(hoogte)} m boven zeeniveau" if hoogte is not None else ""
+        # Alleen "vannacht" als het ook echt vannacht is; anders staat er een
+        # nacht van dagen later onder een kop die vandaag belooft.
+        label = ("Vannacht om 03:00" if eerste["datum"] == vandaag
+                 else f"Eerste nacht &middot; {nl_datum(eerste['datum'])}, 03:00")
         samenvatting = (
             f'<section class="vannacht">'
             f'<div class="vannacht-getal" style="--tl:{licht};--td:{donker}">'
             f'{_temp(t)}<span class="graad">&deg;</span></div>'
             f'<div class="vannacht-tekst">'
-            f'<span class="vannacht-label">Vannacht om 03:00</span>'
+            f'<span class="vannacht-label">{label}</span>'
             f'<span class="vannacht-plek">{html.escape(eerste["etappe"]["plaats"])}</span>'
             f'<span class="vannacht-extra">{extra}</span>'
             f'</div></section>'

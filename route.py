@@ -8,10 +8,10 @@ dus rustdagen horen bij de camping waar je al stond.
 
 TITEL = "Pyreneeën 2026"
 
+# De dagen thuis staan hier bewust niet in. De pagina is openbaar bereikbaar
+# en hoeft niet te vermelden wanneer het huis leegstaat; buiten de reisdagen
+# ziet het dashboard dus simpelweg geen overnachting.
 ROUTE = [
-    # Voor vertrek: gewoon thuis.
-    {"plaats": "Thuis, Groningen",           "lat": 53.22026, "lon": 6.56534,  "van": "2026-08-01", "tot": "2026-09-03", "land": "Nederland"},
-
     {"plaats": "Camping Maka",               "lat": 49.81113, "lon": 5.17507,  "van": "2026-09-04", "tot": "2026-09-04", "land": "Bertrix, België"},
     {"plaats": "Domaine Les Gandins",        "lat": 46.19339, "lon": 3.24323,  "van": "2026-09-05", "tot": "2026-09-05", "land": "Saint-Germain-de-Salles, Frankrijk"},
     {"plaats": "Les Criques de Porteils",    "lat": 42.53408, "lon": 3.06799,  "van": "2026-09-06", "tot": "2026-09-08", "land": "Argeles-sur-Mer, Frankrijk"},
@@ -27,14 +27,11 @@ ROUTE = [
     {"plaats": "Camping Le Bord de Mer",     "lat": 43.40665, "lon": -1.64239, "van": "2026-09-21", "tot": "2026-09-23", "land": "Hendaye, Frankrijk"},
     {"plaats": "Chateauroux",                "lat": 46.80917, "lon": 1.70405,  "van": "2026-09-24", "tot": "2026-09-24", "land": "Frankrijk"},
     {"plaats": "Camping Prahay",             "lat": 49.81377, "lon": 5.01405,  "van": "2026-09-25", "tot": "2026-09-25", "land": "Bouillon, België"},
-
-    # Terug thuis.
-    {"plaats": "Thuis, Groningen",           "lat": 53.22026, "lon": 6.56534,  "van": "2026-09-26", "tot": "2026-12-31", "land": "Nederland"},
 ]
 
 # Rustdagen en bijzonderheden, per datum, zoals in het routeschema.
 NOTITIES = {
-    "2026-09-04": "Vertrek uit Groningen, 500 km snelweg",
+    "2026-09-04": "Vertrekdag, 500 km snelweg",
     "2026-09-05": "536 km, tolwegen vermijden",
     "2026-09-06": "549 km naar de Middellandse Zee",
     "2026-09-07": "Rustdag - zwemmen in de Middellandse Zee",
@@ -56,5 +53,5 @@ NOTITIES = {
     "2026-09-23": "Surfen",
     "2026-09-24": "500 km richting huis",
     "2026-09-25": "500 km",
-    "2026-09-26": "500 km, thuis in Groningen",
+    "2026-09-26": "500 km, laatste etappe naar huis",
 }
