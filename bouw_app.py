@@ -360,6 +360,7 @@ def bouw():
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pyreneeën Weerpost</title>
 <meta name="description" content="Weersverwachting vijf dagen vooruit voor de camping waar we die nacht staan.">
+<meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#E9ECEF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1218" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
