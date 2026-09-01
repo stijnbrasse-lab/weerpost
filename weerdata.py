@@ -16,6 +16,10 @@ FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIJDZONE = "Europe/Paris"
 DAGEN_VOORUIT = 5
 
+# Beginuren van de blokken van twee uur waarin we de dag opdelen, zodat je ziet
+# op welk moment de neerslag valt. Het laatste blok loopt door tot middernacht.
+REGEN_UREN = [8, 10, 12, 14, 16, 18, 20, 22]
+
 
 def _haal(url, params):
     qs = urllib.parse.urlencode(params, doseq=True)
@@ -66,6 +70,31 @@ def _op_uur(vp, wanneer):
     }
 
 
+def regen_blokken(vp, d):
+    """Neerslag per blok van twee uur, van 08:00 tot middernacht.
+
+    Per blok de opgetelde millimeters en de hoogste buienkans erbinnen, zodat
+    zichtbaar wordt op welk moment van de dag de bui valt.
+    """
+    uren = vp["hourly"]
+    blokken = []
+    for h in REGEN_UREN:
+        mm, kans, gevonden = 0.0, 0, False
+        for stap in (0, 1):
+            try:
+                i = uren["time"].index(f"{d.isoformat()}T{h + stap:02d}:00")
+            except ValueError:
+                continue
+            gevonden = True
+            mm += uren["precipitation"][i] or 0
+            k = uren["precipitation_probability"][i]
+            if k is not None:
+                kans = max(kans, k)
+        blokken.append({"uur": h, "mm": round(mm, 2), "kans": kans} if gevonden
+                       else {"uur": h, "mm": None, "kans": None})
+    return blokken
+
+
 def bouw_dagen(route, vandaag=None, dagen=DAGEN_VOORUIT):
     vandaag = vandaag or date.today()
     kalender = route_naar_kalender(route)
@@ -108,6 +137,7 @@ def bouw_dagen(route, vandaag=None, dagen=DAGEN_VOORUIT):
             "code": vp["daily"]["weather_code"][i],
             "max_temp": vp["daily"]["temperature_2m_max"][i],
             "min_temp": vp["daily"]["temperature_2m_min"][i],
+            "regen": regen_blokken(vp, d),
             "middag": _op_uur(vp, datetime.combine(d, time(15))),
             "avond": _op_uur(vp, datetime.combine(d, time(21))),
             "nacht": _op_uur(vp, datetime.combine(d + timedelta(days=1), time(3))),

@@ -155,6 +155,25 @@ function opUur(vp, isoDag, uur) {
   };
 }
 
+const REGEN_UREN = [8, 10, 12, 14, 16, 18, 20, 22];
+
+function regenBlokken(vp, iso) {
+  return REGEN_UREN.map((h) => {
+    let mm = 0, kans = 0, gevonden = false;
+    for (const stap of [0, 1]) {
+      const i = vp.hourly.time.indexOf(`${iso}T${String(h + stap).padStart(2, "0")}:00`);
+      if (i === -1) continue;
+      gevonden = true;
+      mm += vp.hourly.precipitation[i] || 0;
+      const k = vp.hourly.precipitation_probability[i];
+      if (k !== null && k !== undefined) kans = Math.max(kans, k);
+    }
+    return gevonden
+      ? { uur: h, mm: Math.round(mm * 100) / 100, kans }
+      : { uur: h, mm: null, kans: null };
+  });
+}
+
 async function bouwDagen() {
   const vandaag = new Date();
   const gevraagd = [];
@@ -191,6 +210,7 @@ async function bouwDagen() {
       neerslag_kans: vp.daily.precipitation_probability_max[i],
       code: vp.daily.weather_code[i],
       max_temp: vp.daily.temperature_2m_max[i],
+      regen: regenBlokken(vp, iso),
       middag: opUur(vp, iso, 15),
       avond: opUur(vp, iso, 21),
       nacht: opUur(vp, volgende, 3),
@@ -202,6 +222,45 @@ async function bouwDagen() {
 function icoon(soort) {
   const pad = IKONEN[soort] || IKONEN["bewolkt"];
   return `<svg class="ikoon" viewBox="0 0 24 25" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">${pad}</svg>`;
+}
+
+const toonMm = (v) => v.toFixed(1).replace(".", ",");
+
+function regenstrip(blokken, dagtotaal) {
+  const geldig = (blokken || []).filter((b) => b.mm !== null && b.mm !== undefined);
+  if (!geldig.length) return "";
+  if (geldig.reduce((som, b) => som + b.mm, 0) < 0.1) {
+    // Valt er wel regen maar niet overdag, dan is dat het vermelden waard.
+    if (dagtotaal < 0.1) return "";
+    return `<p class="regen-droog">Overdag droog; deze regen valt 's nachts</p>`;
+  }
+
+  const piek = geldig.reduce((a, b) => (b.mm > a.mm ? b : a));
+  // Schaal meebewegen met de dag, maar niet onder 1 mm, anders maakt een
+  // spatje regen optisch een stortbui van zichzelf.
+  const schaal = Math.max(1.0, piek.mm);
+
+  const voorlezen = [];
+  const kolommen = blokken.map((b) => {
+    const uur = String(b.uur).padStart(2, "0");
+    if (b.mm === null || b.mm === undefined) {
+      return `<div class="regen-kolom"><div class="regen-vak"></div><span class="regen-uur">${uur}</span></div>`;
+    }
+    const deel = b.mm <= 0 ? 0 : Math.max(8, Math.round((b.mm / schaal) * 100));
+    const staaf = deel ? `<div class="regen-staaf" style="height:${deel}%"></div>` : "";
+    const tot = String((b.uur + 2) % 24).padStart(2, "0");
+    const titel = `${uur}:00-${tot}:00 · ${toonMm(b.mm)} mm · ${Math.round(b.kans || 0)}% kans`;
+    voorlezen.push(`${uur}:00 ${toonMm(b.mm)} mm`);
+    return `<div class="regen-kolom" title="${titel}"><div class="regen-vak">${staaf}</div><span class="regen-uur">${uur}</span></div>`;
+  }).join("");
+
+  return `<div class="regen">
+    <div class="regen-kop">
+      <span class="regen-titel">Neerslag per 2 uur</span>
+      <span class="regen-piek">piek ${toonMm(piek.mm)} mm om ${String(piek.uur).padStart(2, "0")}:00</span>
+    </div>
+    <div class="regen-strip" role="img" aria-label="Neerslag per twee uur: ${ontsnap(voorlezen.join(", "))}">${kolommen}</div>
+  </div>`;
 }
 
 function blokTijdstip(label, toelichting, meting, nadruk) {
@@ -230,8 +289,7 @@ function kaart(dag, vandaagIso) {
   const mm = dag.neerslag_mm || 0;
   const kans = dag.neerslag_kans || 0;
   const droog = mm < 0.2;
-  const neerslagTekst = droog ? "0 mm" : `${mm.toFixed(1).replace(".", ",")} mm`;
-  const balk = Math.min(100, (mm / 15) * 100);
+  const neerslagTekst = droog ? "0 mm" : `${toonMm(mm)} mm`;
   const notitie = NOTITIES[dag.datum];
 
   let regio = ontsnap(dag.etappe.land || "");
@@ -253,13 +311,12 @@ function kaart(dag, vandaagIso) {
         <div class="weer-omschrijving">${ontsnap(omschrijving)}<span class="dagmax">warmste piek ${toonTemp(dag.max_temp)}&deg;</span></div>
         <div class="neerslag">
           <span class="neerslag-mm${droog ? " is-droog" : ""}">${neerslagTekst}</span>
+          ${droog ? "" : `<span class="neerslag-kans">in 24 uur</span>`}
           <span class="neerslag-kans">${Math.round(kans)}% kans op neerslag</span>
-        </div>
-        <div class="balk" role="img" aria-label="Neerslag ${neerslagTekst}">
-          <div class="balk-vulling" style="width:${balk.toFixed(0)}%"></div>
         </div>
       </div>
     </div>
+    ${regenstrip(dag.regen, mm)}
     <div class="spoor">
       ${blokTijdstip("15:00", "middag", dag.middag, false)}
       <span class="pijl" aria-hidden="true"></span>

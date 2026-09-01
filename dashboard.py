@@ -80,6 +80,58 @@ def _temp(waarde):
     return "--" if waarde is None else f"{round(waarde)}"
 
 
+def _mm(waarde):
+    return f"{waarde:.1f}".replace(".", ",")
+
+
+def regenstrip(blokken, dagtotaal=0):
+    """Staafjes per twee uur, zodat je ziet wanneer op de dag de bui valt.
+
+    Een dag zonder neerslag krijgt geen strip. Valt er wel regen maar niet
+    tussen 08:00 en middernacht, dan zeggen we dat met zoveel woorden: dan
+    weet je dat het dagtotaal 's nachts is gevallen.
+    """
+    geldig = [b for b in blokken if b.get("mm") is not None]
+    if not geldig:
+        return ""
+    if sum(b["mm"] for b in geldig) < 0.1:
+        if dagtotaal < 0.1:
+            return ""
+        return '<p class="regen-droog">Overdag droog; deze regen valt \'s nachts</p>'
+
+    piek = max(geldig, key=lambda b: b["mm"])
+    # Schaal meebewegen met de dag, maar niet onder 1 mm, anders maakt een
+    # spatje regen optisch een stortbui van zichzelf.
+    schaal = max(1.0, piek["mm"])
+
+    kolommen, voorlezen = [], []
+    for b in blokken:
+        uur = f'{b["uur"]:02d}'
+        mm = b.get("mm")
+        if mm is None:
+            kolommen.append(f'<div class="regen-kolom"><div class="regen-vak"></div>'
+                            f'<span class="regen-uur">{uur}</span></div>')
+            continue
+        deel = 0 if mm <= 0 else max(8, round(mm / schaal * 100))
+        staaf = f'<div class="regen-staaf" style="height:{deel}%"></div>' if deel else ""
+        tot = f'{(b["uur"] + 2) % 24:02d}'
+        titel = f'{uur}:00-{tot}:00 &middot; {_mm(mm)} mm &middot; {round(b["kans"] or 0)}% kans'
+        kolommen.append(f'<div class="regen-kolom" title="{titel}">'
+                        f'<div class="regen-vak">{staaf}</div>'
+                        f'<span class="regen-uur">{uur}</span></div>')
+        voorlezen.append(f"{uur}:00 {_mm(mm)} mm")
+
+    return (f'<div class="regen">'
+            f'<div class="regen-kop">'
+            f'<span class="regen-titel">Neerslag per 2 uur</span>'
+            f'<span class="regen-piek">piek {_mm(piek["mm"])} mm om {piek["uur"]:02d}:00</span>'
+            f'</div>'
+            f'<div class="regen-strip" role="img" '
+            f'aria-label="Neerslag per twee uur: {html.escape(", ".join(voorlezen))}">'
+            + "".join(kolommen)
+            + f'</div></div>')
+
+
 def blok_tijdstip(label, toelichting, meting, nadruk=False):
     t = None if meting is None else meting["temp"]
     licht, donker = temp_kleuren(t)
@@ -111,9 +163,7 @@ def kaart(dag, vandaag):
     hoogte = dag.get("hoogte")
 
     droog = mm < 0.2
-    neerslag_tekst = "0 mm" if droog else f"{mm:.1f}".replace(".", ",") + " mm"
-    # Balk loopt vol bij 15 mm; daarboven is het toch gewoon een natte dag.
-    balk = min(100, (mm / 15) * 100)
+    neerslag_tekst = "0 mm" if droog else _mm(mm) + " mm"
     dagmax = dag.get("max_temp")
 
     regio = html.escape(etappe.get("land", ""))
@@ -139,14 +189,13 @@ def kaart(dag, vandaag):
             + f'</div>'
             f'<div class="neerslag">'
             f'<span class="neerslag-mm{" is-droog" if droog else ""}">{neerslag_tekst}</span>'
-            f'<span class="neerslag-kans">{round(kans)}% kans op neerslag</span>'
-            f'</div>'
-            f'<div class="balk" role="img" aria-label="Neerslag {neerslag_tekst}">'
-            f'<div class="balk-vulling" style="width:{balk:.0f}%"></div>'
+            + ('' if droog else '<span class="neerslag-kans">in 24 uur</span>')
+            + f'<span class="neerslag-kans">{round(kans)}% kans op neerslag</span>'
             f'</div>'
             f'</div>'
             f'</div>'
-            f'<div class="spoor">'
+            + regenstrip(dag.get("regen") or [], mm)
+            + f'<div class="spoor">'
             + blok_tijdstip("15:00", "middag", dag["middag"])
             + '<span class="pijl" aria-hidden="true"></span>'
             + blok_tijdstip("21:00", "avond", dag["avond"])
@@ -364,8 +413,54 @@ body {
 .neerslag-mm { font-size: 1.05rem; font-weight: 500; color: var(--nat); }
 .neerslag-mm.is-droog { color: var(--gedempt); }
 .neerslag-kans { font-size: .74rem; color: var(--gedempt); }
-.balk { height: 4px; background: var(--nat-zacht); border-radius: 2px; overflow: hidden; }
-.balk-vulling { height: 100%; background: var(--nat); border-radius: 2px; }
+
+/* ---- Neerslag per blok van twee uur ---- */
+.regen { display: flex; flex-direction: column; gap: .45rem; }
+.regen-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .6rem;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .66rem;
+  color: var(--gedempt);
+}
+.regen-titel { letter-spacing: .1em; text-transform: uppercase; }
+.regen-piek {
+  margin-left: auto;
+  color: var(--nat);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.regen-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.regen-kolom { display: flex; flex-direction: column; gap: .25rem; }
+.regen-vak {
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--nat-zacht);
+  border-radius: 2px;
+}
+.regen-staaf {
+  width: 100%;
+  min-height: 2px;
+  background: var(--nat);
+  border-radius: 3px 3px 0 0;
+}
+.regen-uur {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .6rem;
+  color: var(--gedempt);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.regen-droog {
+  margin: 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .68rem;
+  color: var(--gedempt);
+}
 
 .spoor {
   display: grid;
