@@ -285,13 +285,20 @@ body {
   background: var(--nat);
   border-radius: 3px 3px 0 0;
 }
-.regen-uur {
+/* Begintijd met de eindtijd eronder: "08:00 - 10:00" past niet op een kolom
+   van 36 pixels, gestapeld wel. De eindtijd staat gedempt, zodat het paar als
+   een bereik leest en niet als twee losse tijdstippen. */
+.regen-tijd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .6rem;
+  font-size: .55rem;
+  line-height: 1.25;
   color: var(--gedempt);
-  text-align: center;
   font-variant-numeric: tabular-nums;
 }
+.regen-tijd-tot { opacity: .5; }
 .regen-droog {
   margin: 0;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -623,9 +630,9 @@ const KOMPAS = ["N", "NO", "O", "ZO", "Z", "ZW", "W", "NW"];
 const windstreek = (graden) =>
   (graden === null || graden === undefined) ? null : KOMPAS[Math.round(graden / 45) % 8];
 
-function samenvatting_blok(vp, indexen, label, nacht) {
+function samenvatting_blok(vp, indexen, van, tot, nacht) {
   if (!indexen.length) {
-    return { label, nacht, mm: null, kans: null, wind: null, streek: null, stoot: null };
+    return { van, tot, nacht, mm: null, kans: null, wind: null, streek: null, stoot: null };
   }
   let mm = 0, kans = 0, wind = null, richting = null, stoot = null;
   for (const i of indexen) {
@@ -642,7 +649,7 @@ function samenvatting_blok(vp, indexen, label, nacht) {
     }
   }
   return {
-    label, nacht,
+    van, tot, nacht,
     mm: Math.round(mm * 100) / 100,
     kans,
     wind: wind === null ? null : Math.round(wind),
@@ -658,11 +665,12 @@ function blokkenPerTweeUur(vp, iso) {
 
   const blokken = DAG_UREN.map((h) =>
     samenvatting_blok(vp, [index(iso, h), index(iso, h + 1)].filter((i) => i !== -1),
-                      String(h).padStart(2, "0"), false));
+                      `${String(h).padStart(2, "0")}:00`,
+                      `${String(h + 2).padStart(2, "0")}:00`, false));
 
   const nacht = [index(iso, 22), index(iso, 23)];
   for (let u = 0; u < 8; u++) nacht.push(index(morgen, u));
-  blokken.push(samenvatting_blok(vp, nacht.filter((i) => i !== -1), "22-08", true));
+  blokken.push(samenvatting_blok(vp, nacht.filter((i) => i !== -1), "22:00", "08:00", true));
   return blokken;
 }
 
@@ -719,10 +727,8 @@ function icoon(soort, klasse = "ikoon") {
 const toonMm = (v) => v.toFixed(1).replace(".", ",");
 
 function blokTitel(b) {
-  const span = b.nacht
-    ? "22:00-08:00"
-    : `${b.label}:00-${String((Number(b.label) + 2) % 24).padStart(2, "0")}:00`;
-  const stukken = [span, `${toonMm(b.mm)} mm`, `${Math.round(b.kans || 0)}% kans`];
+  const stukken = [`${b.van} - ${b.tot}`, `${toonMm(b.mm)} mm`,
+                   `${Math.round(b.kans || 0)}% kans`];
   if (b.wind !== null && b.wind !== undefined) {
     let wind = `wind ${b.streek || "?"} ${b.wind} km/u`;
     if (b.stoot !== null && b.stoot !== undefined && b.stoot > b.wind) {
@@ -736,6 +742,9 @@ function blokTitel(b) {
 function tijdstrip(blokken) {
   const geldig = (blokken || []).filter((b) => b.mm !== null && b.mm !== undefined);
   if (!geldig.length) return "";
+  // Een bewaarde verwachting van voor deze versie kent van/tot nog niet. Liever
+  // geen strip dan een strip vol "undefined"; de volgende ophaal herstelt hem.
+  if (!geldig[0].van) return "";
 
   // De schaal ijken op de daguren. Het nachtblok beslaat tien uur en zou de
   // daguren anders platdrukken; dat staafje mag tegen het plafond lopen, want
@@ -747,19 +756,20 @@ function tijdstrip(blokken) {
   const samenvattingTekst = piek.mm < 0.1
     ? "droog"
     : (piek.nacht ? `piek ${toonMm(piek.mm)} mm in de nacht`
-                  : `piek ${toonMm(piek.mm)} mm om ${piek.label}:00`);
+                  : `piek ${toonMm(piek.mm)} mm om ${piek.van}`);
 
   const voorlezen = [];
   const kolommen = blokken.map((b) => {
     const klasse = b.nacht ? "regen-kolom is-nacht" : "regen-kolom";
+    const tijd = `<span class="regen-tijd"><span class="regen-tijd-van">${b.van}</span><span class="regen-tijd-tot">${b.tot}</span></span>`;
     if (b.mm === null || b.mm === undefined) {
-      return `<div class="${klasse}"><div class="regen-vak"></div><span class="regen-mm is-leeg">&ndash;</span><span class="regen-streek is-leeg">&ndash;</span><span class="regen-kmu is-leeg">&ndash;</span><span class="regen-uur">${b.label}</span></div>`;
+      return `<div class="${klasse}"><div class="regen-vak"></div><span class="regen-mm is-leeg">&ndash;</span><span class="regen-streek is-leeg">&ndash;</span><span class="regen-kmu is-leeg">&ndash;</span>${tijd}</div>`;
     }
     const leeg = b.mm < 0.05;
     const deel = b.mm <= 0 ? 0 : Math.min(100, Math.max(8, Math.round((b.mm / schaal) * 100)));
     const staaf = deel ? `<div class="regen-staaf" style="height:${deel}%"></div>` : "";
-    voorlezen.push(`${b.nacht ? "de nacht" : b.label + ":00"}: ${toonMm(b.mm)} mm, wind ${b.streek || "onbekend"} ${b.wind === null ? "onbekend" : b.wind} kilometer per uur`);
-    return `<div class="${klasse}" title="${blokTitel(b)}"><div class="regen-vak">${staaf}</div><span class="regen-mm${leeg ? " is-leeg" : ""}">${leeg ? "0" : toonMm(b.mm)}</span><span class="regen-streek">${b.streek || "&ndash;"}</span><span class="regen-kmu">${b.wind === null ? "&ndash;" : b.wind}</span><span class="regen-uur">${b.label}</span></div>`;
+    voorlezen.push(`${b.nacht ? "de nacht" : b.van + " tot " + b.tot}: ${toonMm(b.mm)} mm, wind ${b.streek || "onbekend"} ${b.wind === null ? "onbekend" : b.wind} kilometer per uur`);
+    return `<div class="${klasse}" title="${blokTitel(b)}"><div class="regen-vak">${staaf}</div><span class="regen-mm${leeg ? " is-leeg" : ""}">${leeg ? "0" : toonMm(b.mm)}</span><span class="regen-streek">${b.streek || "&ndash;"}</span><span class="regen-kmu">${b.wind === null ? "&ndash;" : b.wind}</span>${tijd}</div>`;
   }).join("");
 
   return `<div class="regen">

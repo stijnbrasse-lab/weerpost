@@ -93,8 +93,8 @@ def _mm(waarde):
 
 def _blok_titel(b):
     """Tekst voor de tooltip van een blok."""
-    span = "22:00-08:00" if b.get("nacht") else f'{b["label"]}:00-{(int(b["label"]) + 2) % 24:02d}:00'
-    stukken = [span, f'{_mm(b["mm"])} mm', f'{round(b.get("kans") or 0)}% kans']
+    stukken = [f'{b["van"]} - {b["tot"]}', f'{_mm(b["mm"])} mm',
+               f'{round(b.get("kans") or 0)}% kans']
     if b.get("wind") is not None:
         wind = f'wind {b.get("streek") or "?"} {b["wind"]} km/u'
         if b.get("stoot") is not None and b["stoot"] > b["wind"]:
@@ -125,18 +125,21 @@ def tijdstrip(blokken):
     elif piek.get("nacht"):
         samenvatting = f'piek {_mm(piek["mm"])} mm in de nacht'
     else:
-        samenvatting = f'piek {_mm(piek["mm"])} mm om {piek["label"]}:00'
+        samenvatting = f'piek {_mm(piek["mm"])} mm om {piek["van"]}'
 
     kolommen, voorlezen = [], []
     for b in blokken:
         klasse = "regen-kolom is-nacht" if b.get("nacht") else "regen-kolom"
+        tijd = (f'<span class="regen-tijd">'
+                f'<span class="regen-tijd-van">{b["van"]}</span>'
+                f'<span class="regen-tijd-tot">{b["tot"]}</span></span>')
         mm = b.get("mm")
         if mm is None:
             kolommen.append(f'<div class="{klasse}"><div class="regen-vak"></div>'
                             f'<span class="regen-mm is-leeg">&ndash;</span>'
                             f'<span class="regen-streek is-leeg">&ndash;</span>'
                             f'<span class="regen-kmu is-leeg">&ndash;</span>'
-                            f'<span class="regen-uur">{b["label"]}</span></div>')
+                            f'{tijd}</div>')
             continue
         leeg = mm < 0.05
         deel = 0 if mm <= 0 else min(100, max(8, round(mm / schaal * 100)))
@@ -149,8 +152,8 @@ def tijdstrip(blokken):
             f'{"0" if leeg else _mm(mm)}</span>'
             f'<span class="regen-streek">{b.get("streek") or "&ndash;"}</span>'
             f'<span class="regen-kmu">{"&ndash;" if wind is None else wind}</span>'
-            f'<span class="regen-uur">{b["label"]}</span></div>')
-        span = "de nacht" if b.get("nacht") else f'{b["label"]}:00'
+            f'{tijd}</div>')
+        span = "de nacht" if b.get("nacht") else f'{b["van"]} tot {b["tot"]}'
         voorlezen.append(f'{span}: {_mm(mm)} mm, wind {b.get("streek") or "onbekend"} '
                          f'{"onbekend" if wind is None else wind} kilometer per uur')
 
@@ -547,13 +550,20 @@ body {
   background: var(--nat);
   border-radius: 3px 3px 0 0;
 }
-.regen-uur {
+/* Begintijd met de eindtijd eronder: "08:00 - 10:00" past niet op een kolom
+   van 36 pixels, gestapeld wel. De eindtijd staat gedempt, zodat het paar als
+   een bereik leest en niet als twee losse tijdstippen. */
+.regen-tijd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .6rem;
+  font-size: .55rem;
+  line-height: 1.25;
   color: var(--gedempt);
-  text-align: center;
   font-variant-numeric: tabular-nums;
 }
+.regen-tijd-tot { opacity: .5; }
 .regen-droog {
   margin: 0;
   font-family: "IBM Plex Mono", ui-monospace, monospace;

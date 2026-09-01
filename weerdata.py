@@ -89,14 +89,14 @@ def windstreek(graden):
     return KOMPAS[round(graden / 45) % 8]
 
 
-def _samenvatting(uren, indexen, label, nacht=False):
+def _samenvatting(uren, indexen, van, tot, nacht=False):
     """Vat een reeks uren samen tot een blok.
 
     De wind is die van het hardste uur, niet het gemiddelde: waait het in een
     van de uren stevig, dan wil je dat zien en niet weggemiddeld krijgen.
     """
     if not indexen:
-        return {"label": label, "nacht": nacht, "mm": None, "kans": None,
+        return {"van": van, "tot": tot, "nacht": nacht, "mm": None, "kans": None,
                 "wind": None, "streek": None, "stoot": None}
     mm, kans = 0.0, 0
     wind, richting, stoot = None, None, None
@@ -111,7 +111,8 @@ def _samenvatting(uren, indexen, label, nacht=False):
             richting = uren["wind_direction_10m"][i]
             stoot = uren["wind_gusts_10m"][i]
     return {
-        "label": label,
+        "van": van,
+        "tot": tot,
         "nacht": nacht,
         "mm": round(mm, 2),
         "kans": kans,
@@ -135,11 +136,11 @@ def blokken_per_twee_uur(vp, d):
     blokken = []
     for h in DAG_UREN:
         indexen = [i for i in (index(d, h), index(d, h + 1)) if i is not None]
-        blokken.append(_samenvatting(uren, indexen, f"{h:02d}"))
+        blokken.append(_samenvatting(uren, indexen, f"{h:02d}:00", f"{h + 2:02d}:00"))
 
     nacht = [index(d, u) for u in NACHT_UREN] + [index(morgen, u) for u in NACHT_UREN_ERNA]
     blokken.append(_samenvatting(uren, [i for i in nacht if i is not None],
-                                 "22-08", nacht=True))
+                                 "22:00", "08:00", nacht=True))
     return blokken
 
 
