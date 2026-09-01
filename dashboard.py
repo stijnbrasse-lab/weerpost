@@ -361,45 +361,6 @@ body {
 }
 .titelblok .bijschrift { margin: 0; color: var(--gedempt); font-size: .88rem; }
 
-.vannacht {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.1rem;
-  background: var(--kaart);
-  border: 1px solid var(--lijn);
-  border-left: 3px solid var(--accent);
-  border-radius: 4px;
-  box-shadow: var(--schaduw);
-}
-.vannacht-getal {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 2.6rem;
-  font-weight: 500;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--tl);
-  flex: none;
-}
-.vannacht-tekst { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
-.vannacht-label {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .67rem;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--gedempt);
-}
-.vannacht-plek {
-  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-.vannacht-extra {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .74rem;
-  color: var(--gedempt);
-}
-
 .kaart {
   background: var(--kaart);
   border: 1px solid var(--lijn);
@@ -681,12 +642,10 @@ body {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .stop-temp,
-  :root:not([data-theme="light"]) .blik-temp,
-  :root:not([data-theme="light"]) .vannacht-getal { color: var(--td); }
+  :root:not([data-theme="light"]) .blik-temp { color: var(--td); }
 }
 :root[data-theme="dark"] .stop-temp,
-:root[data-theme="dark"] .blik-temp,
-:root[data-theme="dark"] .vannacht-getal { color: var(--td); }
+:root[data-theme="dark"] .blik-temp { color: var(--td); }
 
 .voet {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -701,7 +660,6 @@ body {
   .titelblok h1 { font-size: 1.75rem; }
   .plek-naam { font-size: 1.3rem; }
   .stop-temp { font-size: 1.4rem; }
-  .vannacht-getal { font-size: 2.2rem; }
 }
 """
 
@@ -747,31 +705,6 @@ SCRIPT_RESERVE = """
 
 def bouw_pagina(dagen, opgehaald):
     vandaag = dagen[0]["datum"]
-
-    eerste = next((d for d in dagen if d["etappe"] and d["nacht"]), None)
-    if eerste:
-        t = eerste["nacht"]["temp"]
-        licht, donker = temp_kleuren(t)
-        hoogte = eerste.get("hoogte")
-        extra = f"{round(hoogte)} m boven zeeniveau" if hoogte is not None else ""
-        # Alleen "vannacht" als het ook echt vannacht is; anders staat er een
-        # nacht van dagen later onder een kop die vandaag belooft.
-        label = ("Vannacht om 03:00" if eerste["datum"] == vandaag
-                 else (f"Eerste nacht &middot; {eerste['datum'].day} "
-                       f"{MAANDEN_NL[eerste['datum'].month - 1]}, 03:00"))
-        samenvatting = (
-            f'<section class="vannacht">'
-            f'<div class="vannacht-getal" style="--tl:{licht};--td:{donker}">'
-            f'{_temp(t)}<span class="graad">&deg;</span></div>'
-            f'<div class="vannacht-tekst">'
-            f'<span class="vannacht-label">{label}</span>'
-            f'<span class="vannacht-plek">{html.escape(eerste["etappe"]["plaats"])}</span>'
-            f'<span class="vannacht-extra">{extra}</span>'
-            f'</div></section>'
-        )
-    else:
-        samenvatting = ""
-
     kaarten = "\n  ".join(kaart(d, vandaag) for d in dagen[:weerdata.DAGEN_VOORUIT])
     blik = vooruitblik(dagen[weerdata.DAGEN_VOORUIT:])
     stempel = opgehaald.strftime("%d-%m-%Y om %H:%M")
@@ -790,8 +723,6 @@ def bouw_pagina(dagen, opgehaald):
   </header>
 
   <div id="verouderd" class="verouderd" hidden></div>
-
-  {samenvatting}
 
   {kaarten}
 

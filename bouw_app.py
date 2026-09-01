@@ -421,32 +421,10 @@ function vooruitblik(dagen) {
   </section>`;
 }
 
-function samenvatting(dagen, vandaagIso) {
-  const eerste = dagen.find((d) => d.etappe && d.nacht);
-  if (!eerste) return "";
-  const [licht, donker] = tempKleuren(eerste.nacht.temp);
-  const hoogte = (eerste.hoogte !== undefined && eerste.hoogte !== null)
-    ? `${Math.round(eerste.hoogte)} m boven zeeniveau` : "";
-  // Alleen "vannacht" als het ook echt vannacht is; anders staat er een nacht
-  // van dagen later onder een kop die vandaag belooft.
-  const label = eerste.datum === vandaagIso
-    ? "Vannacht om 03:00"
-    : `Eerste nacht &middot; ${uitIso(eerste.datum).getDate()} ${MAANDEN_NL[uitIso(eerste.datum).getMonth()]}, 03:00`;
-  return `<section class="vannacht">
-    <div class="vannacht-getal" style="--tl:${licht};--td:${donker}">${toonTemp(eerste.nacht.temp)}<span class="graad">&deg;</span></div>
-    <div class="vannacht-tekst">
-      <span class="vannacht-label">${label}</span>
-      <span class="vannacht-plek">${ontsnap(eerste.etappe.plaats)}</span>
-      <span class="vannacht-extra">${hoogte}</span>
-    </div>
-  </section>`;
-}
-
 function teken(dagen, opgehaaldOp, uitOpslag) {
   const vandaagIso = isoDatum(new Date());
   document.getElementById("inhoud").innerHTML =
-    samenvatting(dagen, vandaagIso)
-    + dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
+    dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
     + vooruitblik(dagen.slice(DAGEN_VOORUIT));
 
   const stempel = new Date(opgehaaldOp);
