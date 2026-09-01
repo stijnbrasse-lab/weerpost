@@ -91,55 +91,76 @@ def _mm(waarde):
     return f"{waarde:.1f}".replace(".", ",")
 
 
-def regenstrip(blokken, dagtotaal=0):
-    """Staafjes per twee uur, zodat je ziet wanneer op de dag de bui valt.
+def _blok_titel(b):
+    """Tekst voor de tooltip van een blok."""
+    span = "22:00-08:00" if b.get("nacht") else f'{b["label"]}:00-{(int(b["label"]) + 2) % 24:02d}:00'
+    stukken = [span, f'{_mm(b["mm"])} mm', f'{round(b.get("kans") or 0)}% kans']
+    if b.get("wind") is not None:
+        wind = f'wind {b.get("streek") or "?"} {b["wind"]} km/u'
+        if b.get("stoot") is not None and b["stoot"] > b["wind"]:
+            wind += f', uitschieters {b["stoot"]}'
+        stukken.append(wind)
+    return html.escape(" - ".join(stukken))
 
-    Een dag zonder neerslag krijgt geen strip. Valt er wel regen maar niet
-    tussen 08:00 en middernacht, dan zeggen we dat met zoveel woorden: dan
-    weet je dat het dagtotaal 's nachts is gevallen.
+
+def tijdstrip(blokken):
+    """Neerslag en wind per blok: overdag per twee uur, plus de nacht.
+
+    Anders dan eerder verschijnt deze strip ook op droge dagen, want de wind
+    is dan net zo goed nieuws als de regen.
     """
     geldig = [b for b in blokken if b.get("mm") is not None]
     if not geldig:
         return ""
-    totaal = sum(b["mm"] for b in geldig)
-    if totaal < 0.1:
-        if dagtotaal < 0.1:
-            return ""
-        return '<p class="regen-droog">Overdag droog; deze regen valt \'s nachts</p>'
+
+    overdag = [b for b in geldig if not b.get("nacht")]
+    # De schaal ijken op de daguren. Het nachtblok beslaat tien uur en zou de
+    # daguren anders platdrukken; dat staafje mag tegen het plafond lopen,
+    # want het getal eronder vertelt de werkelijke hoeveelheid.
+    schaal = max(1.0, max((b["mm"] for b in overdag), default=0))
 
     piek = max(geldig, key=lambda b: b["mm"])
-    # Schaal meebewegen met de dag, maar niet onder 1 mm, anders maakt een
-    # spatje regen optisch een stortbui van zichzelf.
-    schaal = max(1.0, piek["mm"])
+    if piek["mm"] < 0.1:
+        samenvatting = "droog"
+    elif piek.get("nacht"):
+        samenvatting = f'piek {_mm(piek["mm"])} mm in de nacht'
+    else:
+        samenvatting = f'piek {_mm(piek["mm"])} mm om {piek["label"]}:00'
 
     kolommen, voorlezen = [], []
     for b in blokken:
-        uur = f'{b["uur"]:02d}'
+        klasse = "regen-kolom is-nacht" if b.get("nacht") else "regen-kolom"
         mm = b.get("mm")
         if mm is None:
-            kolommen.append(f'<div class="regen-kolom"><div class="regen-vak"></div>'
+            kolommen.append(f'<div class="{klasse}"><div class="regen-vak"></div>'
                             f'<span class="regen-mm is-leeg">&ndash;</span>'
-                            f'<span class="regen-uur">{uur}</span></div>')
+                            f'<span class="regen-streek is-leeg">&ndash;</span>'
+                            f'<span class="regen-kmu is-leeg">&ndash;</span>'
+                            f'<span class="regen-uur">{b["label"]}</span></div>')
             continue
         leeg = mm < 0.05
-        deel = 0 if mm <= 0 else max(8, round(mm / schaal * 100))
+        deel = 0 if mm <= 0 else min(100, max(8, round(mm / schaal * 100)))
         staaf = f'<div class="regen-staaf" style="height:{deel}%"></div>' if deel else ""
-        tot = f'{(b["uur"] + 2) % 24:02d}'
-        titel = f'{uur}:00-{tot}:00 &middot; {_mm(mm)} mm &middot; {round(b["kans"] or 0)}% kans'
-        kolommen.append(f'<div class="regen-kolom" title="{titel}">'
-                        f'<div class="regen-vak">{staaf}</div>'
-                        f'<span class="regen-mm{" is-leeg" if leeg else ""}">'
-                        f'{"0" if leeg else _mm(mm)}</span>'
-                        f'<span class="regen-uur">{uur}</span></div>')
-        voorlezen.append(f"{uur}:00 {_mm(mm)} mm")
+        wind = b.get("wind")
+        kolommen.append(
+            f'<div class="{klasse}" title="{_blok_titel(b)}">'
+            f'<div class="regen-vak">{staaf}</div>'
+            f'<span class="regen-mm{" is-leeg" if leeg else ""}">'
+            f'{"0" if leeg else _mm(mm)}</span>'
+            f'<span class="regen-streek">{b.get("streek") or "&ndash;"}</span>'
+            f'<span class="regen-kmu">{"&ndash;" if wind is None else wind}</span>'
+            f'<span class="regen-uur">{b["label"]}</span></div>')
+        span = "de nacht" if b.get("nacht") else f'{b["label"]}:00'
+        voorlezen.append(f'{span}: {_mm(mm)} mm, wind {b.get("streek") or "onbekend"} '
+                         f'{"onbekend" if wind is None else wind} kilometer per uur')
 
     return (f'<div class="regen">'
             f'<div class="regen-kop">'
-            f'<span class="regen-titel">Neerslag per 2 uur</span>'
-            f'<span class="regen-piek">piek {_mm(piek["mm"])} mm om {piek["uur"]:02d}:00</span>'
+            f'<span class="regen-titel">Neerslag mm &middot; wind km/u</span>'
+            f'<span class="regen-piek">{samenvatting}</span>'
             f'</div>'
             f'<div class="regen-strip" role="img" '
-            f'aria-label="Neerslag per twee uur: {html.escape(", ".join(voorlezen))}">'
+            f'aria-label="Per blok: {html.escape("; ".join(voorlezen))}">'
             + "".join(kolommen)
             + f'</div></div>')
 
@@ -247,7 +268,7 @@ def kaart(dag, vandaag):
             f'</div>'
             f'</div>'
             f'</div>'
-            + regenstrip(dag.get("regen") or [], mm)
+            + tijdstrip(dag.get("blokken") or [])
             + f'<div class="spoor">'
             + blok_tijdstip("15:00", "middag", dag["middag"])
             + '<span class="pijl" aria-hidden="true"></span>'
@@ -497,6 +518,22 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .regen-mm.is-leeg { color: var(--gedempt); opacity: .55; }
+.regen-streek,
+.regen-kmu {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .58rem;
+  line-height: 1.2;
+  color: var(--gedempt);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.regen-streek { color: var(--inkt); opacity: .7; }
+.regen-streek.is-leeg, .regen-kmu.is-leeg { opacity: .45; }
+/* Het nachtblok beslaat tien uur in plaats van twee; dat mag je zien. */
+.regen-kolom.is-nacht .regen-vak {
+  background: var(--kaart-2);
+  box-shadow: inset 0 0 0 1px var(--lijn);
+}
 .regen-vak {
   height: 34px;
   display: flex;

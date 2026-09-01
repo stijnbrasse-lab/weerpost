@@ -143,7 +143,8 @@ async function haalVoorspelling(etappe, start, eind) {
   const p = new URLSearchParams({
     latitude: etappe.lat,
     longitude: etappe.lon,
-    hourly: "temperature_2m,precipitation,precipitation_probability,weather_code",
+    hourly: "temperature_2m,precipitation,precipitation_probability,weather_code,"
+          + "wind_speed_10m,wind_direction_10m,wind_gusts_10m",
     daily: "precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code",
     start_date: start,
     end_date: eind,
@@ -168,23 +169,55 @@ function opUur(vp, isoDag, uur) {
   };
 }
 
-const REGEN_UREN = [8, 10, 12, 14, 16, 18, 20, 22];
+// Overdag per twee uur, daarna een nachtblok van 22:00 tot 08:00: dat zijn de
+// uren dat je in de tent ligt, en die hoef je niet per twee uur te weten.
+const DAG_UREN = [8, 10, 12, 14, 16, 18, 20];
+const KOMPAS = ["N", "NO", "O", "ZO", "Z", "ZW", "W", "NW"];
 
-function regenBlokken(vp, iso) {
-  return REGEN_UREN.map((h) => {
-    let mm = 0, kans = 0, gevonden = false;
-    for (const stap of [0, 1]) {
-      const i = vp.hourly.time.indexOf(`${iso}T${String(h + stap).padStart(2, "0")}:00`);
-      if (i === -1) continue;
-      gevonden = true;
-      mm += vp.hourly.precipitation[i] || 0;
-      const k = vp.hourly.precipitation_probability[i];
-      if (k !== null && k !== undefined) kans = Math.max(kans, k);
+const windstreek = (graden) =>
+  (graden === null || graden === undefined) ? null : KOMPAS[Math.round(graden / 45) % 8];
+
+function samenvatting_blok(vp, indexen, label, nacht) {
+  if (!indexen.length) {
+    return { label, nacht, mm: null, kans: null, wind: null, streek: null, stoot: null };
+  }
+  let mm = 0, kans = 0, wind = null, richting = null, stoot = null;
+  for (const i of indexen) {
+    mm += vp.hourly.precipitation[i] || 0;
+    const k = vp.hourly.precipitation_probability[i];
+    if (k !== null && k !== undefined) kans = Math.max(kans, k);
+    // De wind van het hardste uur, niet het gemiddelde: waait het in een van
+    // de uren stevig, dan wil je dat zien en niet weggemiddeld krijgen.
+    const s = vp.hourly.wind_speed_10m[i];
+    if (s !== null && s !== undefined && (wind === null || s > wind)) {
+      wind = s;
+      richting = vp.hourly.wind_direction_10m[i];
+      stoot = vp.hourly.wind_gusts_10m[i];
     }
-    return gevonden
-      ? { uur: h, mm: Math.round(mm * 100) / 100, kans }
-      : { uur: h, mm: null, kans: null };
-  });
+  }
+  return {
+    label, nacht,
+    mm: Math.round(mm * 100) / 100,
+    kans,
+    wind: wind === null ? null : Math.round(wind),
+    streek: windstreek(richting),
+    stoot: stoot === null || stoot === undefined ? null : Math.round(stoot),
+  };
+}
+
+function blokkenPerTweeUur(vp, iso) {
+  const morgen = isoDatum(plusDagen(uitIso(iso), 1));
+  const index = (dag, uur) =>
+    vp.hourly.time.indexOf(`${dag}T${String(uur).padStart(2, "0")}:00`);
+
+  const blokken = DAG_UREN.map((h) =>
+    samenvatting_blok(vp, [index(iso, h), index(iso, h + 1)].filter((i) => i !== -1),
+                      String(h).padStart(2, "0"), false));
+
+  const nacht = [index(iso, 22), index(iso, 23)];
+  for (let u = 0; u < 8; u++) nacht.push(index(morgen, u));
+  blokken.push(samenvatting_blok(vp, nacht.filter((i) => i !== -1), "22-08", true));
+  return blokken;
 }
 
 async function bouwDagen() {
@@ -223,7 +256,7 @@ async function bouwDagen() {
       neerslag_kans: vp.daily.precipitation_probability_max[i],
       code: vp.daily.weather_code[i],
       max_temp: vp.daily.temperature_2m_max[i],
-      regen: regenBlokken(vp, iso),
+      blokken: blokkenPerTweeUur(vp, iso),
       middag: opUur(vp, iso, 15),
       avond: opUur(vp, iso, 21),
       nacht: opUur(vp, volgende, 3),
@@ -239,42 +272,56 @@ function icoon(soort, klasse = "ikoon") {
 
 const toonMm = (v) => v.toFixed(1).replace(".", ",");
 
-function regenstrip(blokken, dagtotaal) {
+function blokTitel(b) {
+  const span = b.nacht
+    ? "22:00-08:00"
+    : `${b.label}:00-${String((Number(b.label) + 2) % 24).padStart(2, "0")}:00`;
+  const stukken = [span, `${toonMm(b.mm)} mm`, `${Math.round(b.kans || 0)}% kans`];
+  if (b.wind !== null && b.wind !== undefined) {
+    let wind = `wind ${b.streek || "?"} ${b.wind} km/u`;
+    if (b.stoot !== null && b.stoot !== undefined && b.stoot > b.wind) {
+      wind += `, uitschieters ${b.stoot}`;
+    }
+    stukken.push(wind);
+  }
+  return ontsnap(stukken.join(" - "));
+}
+
+function tijdstrip(blokken) {
   const geldig = (blokken || []).filter((b) => b.mm !== null && b.mm !== undefined);
   if (!geldig.length) return "";
-  const totaal = geldig.reduce((som, b) => som + b.mm, 0);
-  if (totaal < 0.1) {
-    // Valt er wel regen maar niet overdag, dan is dat het vermelden waard.
-    if (dagtotaal < 0.1) return "";
-    return `<p class="regen-droog">Overdag droog; deze regen valt 's nachts</p>`;
-  }
+
+  // De schaal ijken op de daguren. Het nachtblok beslaat tien uur en zou de
+  // daguren anders platdrukken; dat staafje mag tegen het plafond lopen, want
+  // het getal eronder vertelt de werkelijke hoeveelheid.
+  const overdag = geldig.filter((b) => !b.nacht);
+  const schaal = Math.max(1.0, ...overdag.map((b) => b.mm), 0);
 
   const piek = geldig.reduce((a, b) => (b.mm > a.mm ? b : a));
-  // Schaal meebewegen met de dag, maar niet onder 1 mm, anders maakt een
-  // spatje regen optisch een stortbui van zichzelf.
-  const schaal = Math.max(1.0, piek.mm);
+  const samenvattingTekst = piek.mm < 0.1
+    ? "droog"
+    : (piek.nacht ? `piek ${toonMm(piek.mm)} mm in de nacht`
+                  : `piek ${toonMm(piek.mm)} mm om ${piek.label}:00`);
 
   const voorlezen = [];
   const kolommen = blokken.map((b) => {
-    const uur = String(b.uur).padStart(2, "0");
+    const klasse = b.nacht ? "regen-kolom is-nacht" : "regen-kolom";
     if (b.mm === null || b.mm === undefined) {
-      return `<div class="regen-kolom"><div class="regen-vak"></div><span class="regen-mm is-leeg">&ndash;</span><span class="regen-uur">${uur}</span></div>`;
+      return `<div class="${klasse}"><div class="regen-vak"></div><span class="regen-mm is-leeg">&ndash;</span><span class="regen-streek is-leeg">&ndash;</span><span class="regen-kmu is-leeg">&ndash;</span><span class="regen-uur">${b.label}</span></div>`;
     }
     const leeg = b.mm < 0.05;
-    const deel = b.mm <= 0 ? 0 : Math.max(8, Math.round((b.mm / schaal) * 100));
+    const deel = b.mm <= 0 ? 0 : Math.min(100, Math.max(8, Math.round((b.mm / schaal) * 100)));
     const staaf = deel ? `<div class="regen-staaf" style="height:${deel}%"></div>` : "";
-    const tot = String((b.uur + 2) % 24).padStart(2, "0");
-    const titel = `${uur}:00-${tot}:00 · ${toonMm(b.mm)} mm · ${Math.round(b.kans || 0)}% kans`;
-    voorlezen.push(`${uur}:00 ${toonMm(b.mm)} mm`);
-    return `<div class="regen-kolom" title="${titel}"><div class="regen-vak">${staaf}</div><span class="regen-mm${leeg ? " is-leeg" : ""}">${leeg ? "0" : toonMm(b.mm)}</span><span class="regen-uur">${uur}</span></div>`;
+    voorlezen.push(`${b.nacht ? "de nacht" : b.label + ":00"}: ${toonMm(b.mm)} mm, wind ${b.streek || "onbekend"} ${b.wind === null ? "onbekend" : b.wind} kilometer per uur`);
+    return `<div class="${klasse}" title="${blokTitel(b)}"><div class="regen-vak">${staaf}</div><span class="regen-mm${leeg ? " is-leeg" : ""}">${leeg ? "0" : toonMm(b.mm)}</span><span class="regen-streek">${b.streek || "&ndash;"}</span><span class="regen-kmu">${b.wind === null ? "&ndash;" : b.wind}</span><span class="regen-uur">${b.label}</span></div>`;
   }).join("");
 
   return `<div class="regen">
     <div class="regen-kop">
-      <span class="regen-titel">Neerslag per 2 uur</span>
-      <span class="regen-piek">piek ${toonMm(piek.mm)} mm om ${String(piek.uur).padStart(2, "0")}:00</span>
+      <span class="regen-titel">Neerslag mm &middot; wind km/u</span>
+      <span class="regen-piek">${samenvattingTekst}</span>
     </div>
-    <div class="regen-strip" role="img" aria-label="Neerslag per twee uur: ${ontsnap(voorlezen.join(", "))}">${kolommen}</div>
+    <div class="regen-strip" role="img" aria-label="Per blok: ${ontsnap(voorlezen.join("; "))}">${kolommen}</div>
   </div>`;
 }
 
@@ -331,7 +378,7 @@ function kaart(dag, vandaagIso) {
         </div>
       </div>
     </div>
-    ${regenstrip(dag.regen, mm)}
+    ${tijdstrip(dag.blokken)}
     <div class="spoor">
       ${blokTijdstip("15:00", "middag", dag.middag, false)}
       <span class="pijl" aria-hidden="true"></span>
