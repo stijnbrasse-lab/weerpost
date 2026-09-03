@@ -174,7 +174,8 @@ def tijdstrip(blokken):
 # zonder die U-keer leest het als een raster in plaats van als een route.
 PER_RIJ = 8
 SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
-SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 6.0, 15.0, 11.0
+SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 8.0, 16.5, 8.0
+SPOOR_AANLOOP = 3.0  # waar het pad begint, links van de eerste dag
 STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
 
 
@@ -222,7 +223,9 @@ def bouw_spoor(aantal):
     stap = (SPOOR_RECHTS - SPOOR_LINKS) / (PER_RIJ - 1)
     rijlengte = SPOOR_RECHTS - SPOOR_LINKS
     punten, lengtes, stukken = [], [], []
-    tot_hier = 0.0
+    # Kort aanloopstuk voor de eerste dag: die rit begint thuis, en thuis staat
+    # niet op het spoor. Zonder dat stukje heeft die etappe nergens plek.
+    tot_hier = SPOOR_LINKS - SPOOR_AANLOOP
 
     for r in range(rijen):
         y = SPOOR_TOP + r * SPOOR_RIJHOOGTE
@@ -235,8 +238,12 @@ def bouw_spoor(aantal):
             punten.append((round(start + i * richting, 2), y))
             lengtes.append(round(tot_hier + abs(i * richting), 2))
 
-        stukken.append(f'{"M" if r == 0 else "L"} {start} {y}')
-        stukken.append(f"L {eind} {y}")
+        if r == 0:
+            stukken.append(f"M {SPOOR_AANLOOP} {y}")
+            stukken.append(f"L {eind} {y}")
+        else:
+            stukken.append(f"L {start} {y}")
+            stukken.append(f"L {eind} {y}")
         tot_hier += rijlengte
 
         if r < rijen - 1:
@@ -246,9 +253,23 @@ def bouw_spoor(aantal):
             stukken.append(f"C {bocht} {y} {bocht} {y2} {eind} {y2}")
             tot_hier += _bochtlengte((eind, y), (bocht, y), (bocht, y2), (eind, y2))
 
+    # Middens van de trajecten: daar komen de kilometers te staan. Het traject
+    # naar dag N loopt van kamp N-1 naar kamp N; voor dag 1 is dat het
+    # aanloopstuk. Valt een traject in een bocht, dan gaat het label naar de
+    # buitenkant daarvan.
+    tussen = [((SPOOR_AANLOOP + SPOOR_LINKS) / 2, punten[0][1])]
+    for i in range(1, len(punten)):
+        (vx, vy), (nx, ny) = punten[i - 1], punten[i]
+        if vy == ny:
+            tussen.append((round((vx + nx) / 2, 2), vy))
+        else:
+            bocht = 95.5 if ((i - 1) // PER_RIJ) % 2 == 0 else 4.5
+            tussen.append((bocht, round((vy + ny) / 2, 2)))
+
     return {
         "pad": " ".join(stukken),
         "punten": punten,
+        "tussen": tussen,
         "lengtes": lengtes,
         "totaal": round(tot_hier, 2),
         "hoogte": SPOOR_TOP + (rijen - 1) * SPOOR_RIJHOOGTE + SPOOR_BODEM,
@@ -347,12 +368,15 @@ def reisvoortgang(vandaag):
                 f'<rect class="streep streep-{stand}" x="{x - 1.2:.2f}" '
                 f'y="{y - STREEP_HOOG / 2:.2f}" width="2.4" height="{STREEP_HOOG:.0f}" '
                 f'rx="1.2"></rect>')
-        km = kilometers[i - 1]
         merken.append(
             f'<text class="spoor-datum{" is-nu" if nu else ""}" x="{x:.2f}" '
-            f'y="{y + 6.6:.2f}" text-anchor="middle">{labels[i - 1]}</text>'
-            f'<text class="spoor-km{" is-nul" if not km else ""}" x="{x:.2f}" '
-            f'y="{y + 9.9:.2f}" text-anchor="middle">{km}</text>')
+            f'y="{y + 7:.2f}" text-anchor="middle">{labels[i - 1]}</text>')
+        # De kilometers staan op het traject ernaartoe, niet onder de dag.
+        km = kilometers[i - 1]
+        tx, ty = spoor["tussen"][i - 1]
+        merken.append(
+            f'<text class="spoor-km{" is-nul" if not km else ""}" x="{tx:.2f}" '
+            f'y="{ty - 5:.2f}" text-anchor="middle">{km}</text>')
 
     # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
     if v["nummer"] is None:
