@@ -174,7 +174,7 @@ def tijdstrip(blokken):
 # zonder die U-keer leest het als een raster in plaats van als een route.
 PER_RIJ = 8
 SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
-SPOOR_TOP, SPOOR_RIJHOOGTE = 8.0, 15.0
+SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 6.0, 15.0, 11.0
 STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
 
 
@@ -187,6 +187,14 @@ def spoor_labels():
         d = start + timedelta(days=i)
         labels.append(f"{DAGEN_KORT[d.weekday()]} {d.day:02d}")
     return labels
+
+
+def spoor_km():
+    """Te rijden kilometers per reisdag, in dezelfde volgorde als de labels."""
+    start = date.fromisoformat(route.REIS_START)
+    aantal = (date.fromisoformat(route.REIS_EIND) - start).days + 1
+    return [route.KM.get((start + timedelta(days=i)).isoformat(), 0)
+            for i in range(aantal)]
 
 
 def _bochtlengte(p0, p1, p2, p3, n=32):
@@ -243,7 +251,7 @@ def bouw_spoor(aantal):
         "punten": punten,
         "lengtes": lengtes,
         "totaal": round(tot_hier, 2),
-        "hoogte": SPOOR_TOP * 2 + (rijen - 1) * SPOOR_RIJHOOGTE,
+        "hoogte": SPOOR_TOP + (rijen - 1) * SPOOR_RIJHOOGTE + SPOOR_BODEM,
         "hoog": STREEP_HOOG,
         "per_rij": PER_RIJ,
         "defender": DEFENDER,
@@ -323,7 +331,7 @@ def reisvoortgang(vandaag):
     spoor = bouw_spoor(v["totaal_dagen"])
 
     voorbij = vandaag > date.fromisoformat(route.REIS_EIND)
-    labels = spoor_labels()
+    labels, kilometers = spoor_labels(), spoor_km()
     strepen, merken, wagen = [], [], ""
     for i, (x, y) in enumerate(spoor["punten"], start=1):
         nu = v["nummer"] is not None and i == v["nummer"]
@@ -339,9 +347,12 @@ def reisvoortgang(vandaag):
                 f'<rect class="streep streep-{stand}" x="{x - 1.2:.2f}" '
                 f'y="{y - STREEP_HOOG / 2:.2f}" width="2.4" height="{STREEP_HOOG:.0f}" '
                 f'rx="1.2"></rect>')
+        km = kilometers[i - 1]
         merken.append(
             f'<text class="spoor-datum{" is-nu" if nu else ""}" x="{x:.2f}" '
-            f'y="{y + 7.4:.2f}" text-anchor="middle">{labels[i - 1]}</text>')
+            f'y="{y + 6.6:.2f}" text-anchor="middle">{labels[i - 1]}</text>'
+            f'<text class="spoor-km{" is-nul" if not km else ""}" x="{x:.2f}" '
+            f'y="{y + 9.9:.2f}" text-anchor="middle">{km}</text>')
 
     # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
     if v["nummer"] is None:
@@ -611,12 +622,17 @@ body {
   stroke-width: 1.1;
   stroke-linecap: round;
 }
-.spoor-datum {
+/* 2,85 eenheden komt op een telefoonscherm uit op 8,8 px, gelijk aan de
+   tijden onder de neerslagstrip. */
+.spoor-datum,
+.spoor-km {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 3.2px;
+  font-size: 2.85px;
   fill: var(--gedempt);
 }
 .spoor-datum.is-nu { fill: var(--accent); }
+.spoor-km { opacity: .75; }
+.spoor-km.is-nul { opacity: .4; }
 .streep { fill: var(--lijn); }
 .streep-was { fill: var(--accent); opacity: .55; }
 .spoor-af { stroke: var(--accent); opacity: .55; }

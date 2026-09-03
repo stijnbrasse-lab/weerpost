@@ -435,7 +435,9 @@ function reisvoortgang() {
   const strepen = SPOOR.punten.map(([x, y], i) => {
     const dag = i + 1;
     const nu = nummer !== null && dag === nummer;
-    merken.push(`<text class="spoor-datum${nu ? " is-nu" : ""}" x="${x.toFixed(2)}" y="${(y + 7.4).toFixed(2)}" text-anchor="middle">${SPOOR.labels[i]}</text>`);
+    const km = SPOOR.km[i];
+    merken.push(`<text class="spoor-datum${nu ? " is-nu" : ""}" x="${x.toFixed(2)}" y="${(y + 6.6).toFixed(2)}" text-anchor="middle">${SPOOR.labels[i]}</text>`
+              + `<text class="spoor-km${km ? "" : " is-nul"}" x="${x.toFixed(2)}" y="${(y + 9.9).toFixed(2)}" text-anchor="middle">${km}</text>`);
     if (nu) {
       // Op de plek van vandaag staat de Defender in plaats van een streep.
       wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
@@ -565,7 +567,8 @@ def bouw():
               .replace("__REIS_EIND__", route.REIS_EIND)
               .replace("__KM__", json.dumps(route.KM))
               .replace("__SPOOR__", json.dumps(dict(dashboard.bouw_spoor(reisdagen),
-                                      labels=dashboard.spoor_labels())))
+                                      labels=dashboard.spoor_labels(),
+                                      km=dashboard.spoor_km())))
               .replace("__ROUTE__", json.dumps(route.ROUTE, ensure_ascii=False))
               .replace("__NOTITIES__", json.dumps(route.NOTITIES, ensure_ascii=False))
               .replace("__WEER__", json.dumps({str(k): list(v) for k, v in dashboard.WEER.items()}, ensure_ascii=False))
