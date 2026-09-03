@@ -27,6 +27,7 @@
   --accent: #8F6115;
   --nat: #2F6FA6;
   --nat-zacht: rgba(47, 111, 166, .16);
+  --defender: #3F6B45;
   --schaduw: 0 1px 2px rgba(20, 26, 32, .06), 0 8px 20px -12px rgba(20, 26, 32, .3);
 }
 @media (prefers-color-scheme: dark) {
@@ -40,6 +41,7 @@
     --accent: #D7A24A;
     --nat: #6FAEE0;
     --nat-zacht: rgba(111, 174, 224, .18);
+    --defender: #79B37C;
     --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
   }
 }
@@ -53,6 +55,7 @@
   --accent: #D7A24A;
   --nat: #6FAEE0;
   --nat-zacht: rgba(111, 174, 224, .18);
+  --defender: #79B37C;
   --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
 }
 
@@ -95,6 +98,61 @@ body {
   text-wrap: balance;
 }
 .titelblok .bijschrift { margin: 0; color: var(--gedempt); font-size: .88rem; }
+
+/* ---- Slingerende route ---- */
+.voortgang {
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-radius: 4px;
+  padding: .9rem 1.1rem 1rem;
+  box-shadow: var(--schaduw);
+}
+.voortgang-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .6rem;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .66rem;
+}
+.voortgang-titel {
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.voortgang-km {
+  margin-left: auto;
+  color: var(--gedempt);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.voortgang-dag {
+  margin: .15rem 0 .6rem;
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.spoor { display: block; width: 100%; height: auto; overflow: visible; }
+.spoor-lijn {
+  stroke: var(--lijn);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+.voortgang-uiteinden {
+  display: flex;
+  justify-content: space-between;
+  padding-top: .4rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .62rem;
+  color: var(--gedempt);
+}
+.streep { fill: var(--lijn); }
+.streep-was { fill: var(--accent); opacity: .55; }
+.spoor-af { stroke: var(--accent); opacity: .55; }
+.defender-body { fill: var(--defender); }
+.defender-glas { fill: var(--kaart); }
 
 .kaart {
   background: var(--kaart);
@@ -506,6 +564,8 @@ const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul",
                       "aug", "sep", "okt", "nov", "dec"];
 const REIS_START = "2026-09-04";
 const REIS_EIND = "2026-09-27";
+const KM = {"2026-09-04": 500, "2026-09-05": 536, "2026-09-06": 549, "2026-09-07": 0, "2026-09-08": 0, "2026-09-09": 45, "2026-09-10": 150, "2026-09-11": 120, "2026-09-12": 0, "2026-09-13": 60, "2026-09-14": 110, "2026-09-15": 136, "2026-09-16": 90, "2026-09-17": 0, "2026-09-18": 0, "2026-09-19": 100, "2026-09-20": 180, "2026-09-21": 200, "2026-09-22": 0, "2026-09-23": 0, "2026-09-24": 500, "2026-09-25": 500, "2026-09-26": 500, "2026-09-27": 0};
+const SPOOR = {"pad": "M 10.0 8.0 L 90.0 8.0 C 95.5 8.0 95.5 20.0 90.0 20.0 L 90.0 20.0 L 10.0 20.0 C 4.5 20.0 4.5 32.0 10.0 32.0 L 10.0 32.0 L 90.0 32.0", "punten": [[10.0, 8.0], [21.43, 8.0], [32.86, 8.0], [44.29, 8.0], [55.71, 8.0], [67.14, 8.0], [78.57, 8.0], [90.0, 8.0], [90.0, 20.0], [78.57, 20.0], [67.14, 20.0], [55.71, 20.0], [44.29, 20.0], [32.86, 20.0], [21.43, 20.0], [10.0, 20.0], [10.0, 32.0], [21.43, 32.0], [32.86, 32.0], [44.29, 32.0], [55.71, 32.0], [67.14, 32.0], [78.57, 32.0], [90.0, 32.0]], "lengtes": [0.0, 11.43, 22.86, 34.29, 45.71, 57.14, 68.57, 80.0, 96.18, 107.61, 119.04, 130.47, 141.9, 153.33, 164.76, 176.18, 192.37, 203.8, 215.23, 226.66, 238.08, 249.51, 260.94, 272.37], "totaal": 272.37, "hoogte": 40.0, "hoog": 8.0, "per_rij": 8, "defender": "<circle class=\"defender-body\" cx=\"2.4\" cy=\"6.6\" r=\"2.2\"></circle><path class=\"defender-body\" d=\"M3.6 10.2 L3.6 2.6 L19.2 2.6 L20.7 5.3 L24 5.3 L24 10.2 Z\"></path><circle class=\"defender-body\" cx=\"7.8\" cy=\"10.4\" r=\"2\"></circle><circle class=\"defender-body\" cx=\"20.6\" cy=\"10.4\" r=\"2\"></circle><path class=\"defender-glas\" d=\"M4.8 3.6 H11.4 V6.2 H4.8 Z M12.4 3.6 H18.4 V6.2 H12.4 Z\"></path><circle class=\"defender-glas\" cx=\"2.4\" cy=\"6.6\" r=\"0.95\"></circle><circle class=\"defender-glas\" cx=\"7.8\" cy=\"10.4\" r=\"0.75\"></circle><circle class=\"defender-glas\" cx=\"20.6\" cy=\"10.4\" r=\"0.75\"></circle>", "defender_breed": 24.5, "defender_midden": 7.5, "defender_span": 11.0};
 // Vijf dagen met alle details, daarna nog vijf als ruwe vooruitblik.
 const DAGEN_VOORUIT = 5;
 const DAGEN_TOTAAL = 10;
@@ -803,6 +863,78 @@ function kaart(dag, vandaagIso) {
   </article>`;
 }
 
+// ---- Slingerende route bovenaan ----
+// De vorm komt kant-en-klaar uit dashboard.py, zodat app en reservekopie
+// dezelfde bochten tekenen. Alleen de stand per dag hangt van vandaag af.
+const kmGetal = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+function defenderSvg(x, y, naarRechts) {
+  const s = SPOOR.defender_span / SPOOR.defender_breed;
+  const dx = (SPOOR.defender_breed / 2) * s;
+  const dy = SPOOR.defender_midden * s;
+  const t = naarRechts
+    ? `translate(${(x - dx).toFixed(2)} ${(y - dy).toFixed(2)}) scale(${s.toFixed(4)})`
+    : `translate(${(x + dx).toFixed(2)} ${(y - dy).toFixed(2)}) scale(${(-s).toFixed(4)} ${s.toFixed(4)})`;
+  return `<g class="defender" transform="${t}">${SPOOR.defender}</g>`;
+}
+
+function reisvoortgang() {
+  const vandaag = isoDatum(new Date());
+  const kmTotaal = Object.values(KM).reduce((s, n) => s + n, 0);
+  // Gereden is wat achter de rug is: de dagen voor vandaag.
+  const kmGereden = Object.entries(KM)
+    .filter(([datum]) => datum < vandaag)
+    .reduce((s, [, n]) => s + n, 0);
+
+  let nummer = null, kop;
+  if (vandaag < REIS_START) {
+    const tot = Math.round((uitIso(REIS_START) - uitIso(vandaag)) / 86400000);
+    kop = tot === 1 ? "Vertrek morgen" : `Vertrek over ${tot} dagen`;
+  } else if (vandaag > REIS_EIND) {
+    kop = "Reis afgerond";
+  } else {
+    nummer = Math.round((uitIso(vandaag) - uitIso(REIS_START)) / 86400000) + 1;
+    kop = `Dag ${nummer} van ${SPOOR.punten.length}`;
+  }
+
+  const voorbij = vandaag > REIS_EIND;
+  let wagen = "";
+  const strepen = SPOOR.punten.map(([x, y], i) => {
+    const dag = i + 1;
+    if (nummer !== null && dag === nummer) {
+      // Op de plek van vandaag staat de Defender in plaats van een streep.
+      wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
+      return "";
+    }
+    const stand = nummer === null
+      ? (voorbij ? "was" : "komt")
+      : (dag < nummer ? "was" : "komt");
+    return `<rect class="streep streep-${stand}" x="${(x - 1.2).toFixed(2)}" y="${(y - SPOOR.hoog / 2).toFixed(2)}" width="2.4" height="${SPOOR.hoog}" rx="1.2"></rect>`;
+  }).join("");
+
+  // De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
+  const afgelegd = nummer === null
+    ? (voorbij ? SPOOR.totaal : 0)
+    : SPOOR.lengtes[nummer - 1];
+  const afgelegdeLijn = afgelegd > 0
+    ? `<path class="spoor-lijn spoor-af" d="${SPOOR.pad}" fill="none" stroke-dasharray="${afgelegd} ${SPOOR.totaal}"></path>`
+    : "";
+
+  return `<section class="voortgang">
+    <div class="voortgang-kop">
+      <span class="voortgang-titel">Waar we zijn</span>
+      <span class="voortgang-km">${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} km gereden</span>
+    </div>
+    <p class="voortgang-dag">${kop}</p>
+    <svg class="spoor" viewBox="0 0 100 ${SPOOR.hoogte}" role="img" aria-label="Routevoortgang: ${ontsnap(kop)}, ${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} kilometer gereden">
+      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${wagen}
+    </svg>
+    <div class="voortgang-uiteinden">
+      <span>${kortDatum(REIS_START)}</span><span>${kortDatum(REIS_EIND)}</span>
+    </div>
+  </section>`;
+}
+
 function vooruitblik(dagen) {
   // Bewust karig van vorm: op deze afstand is het een richting, geen planning.
   const rijen = dagen.filter((d) => d.etappe).map((dag) => {
@@ -835,7 +967,8 @@ function vooruitblik(dagen) {
 function teken(dagen, opgehaaldOp, uitOpslag) {
   const vandaagIso = isoDatum(new Date());
   document.getElementById("inhoud").innerHTML =
-    dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
+    reisvoortgang()
+    + dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
     + vooruitblik(dagen.slice(DAGEN_VOORUIT));
 
   const stempel = new Date(opgehaaldOp);

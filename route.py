@@ -29,6 +29,21 @@ ROUTE = [
     {"plaats": "Camping Prahay",             "lat": 49.81377, "lon": 5.01405,  "van": "2026-09-25", "tot": "2026-09-25", "land": "Bouillon, België"},
 ]
 
+# Reisperiode, gebruikt voor de voortgangsbalk bovenaan.
+REIS_START = "2026-09-04"
+REIS_EIND = "2026-09-27"
+
+# Kilometers per dag uit het routeschema; rustdagen staan op nul. De som is
+# 4276, gelijk aan het totaal onderaan de spreadsheet.
+KM = {
+    "2026-09-04": 500, "2026-09-05": 536, "2026-09-06": 549, "2026-09-07": 0,
+    "2026-09-08": 0,   "2026-09-09": 45,  "2026-09-10": 150, "2026-09-11": 120,
+    "2026-09-12": 0,   "2026-09-13": 60,  "2026-09-14": 110, "2026-09-15": 136,
+    "2026-09-16": 90,  "2026-09-17": 0,   "2026-09-18": 0,   "2026-09-19": 100,
+    "2026-09-20": 180, "2026-09-21": 200, "2026-09-22": 0,   "2026-09-23": 0,
+    "2026-09-24": 500, "2026-09-25": 500, "2026-09-26": 500, "2026-09-27": 0,
+}
+
 # Rustdagen en bijzonderheden, per datum, zoals in het routeschema.
 NOTITIES = {
     "2026-09-04": "Vertrekdag, 500 km snelweg",

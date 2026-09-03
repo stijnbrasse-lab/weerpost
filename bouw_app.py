@@ -6,6 +6,7 @@ de verwachting zelf op bij Open-Meteo zodra je hem opent. Vormgeving, teksten
 en weercodes komen uit dashboard.py, zodat er maar een bron van waarheid is.
 """
 import json
+from datetime import date
 
 import dashboard
 import route
@@ -93,8 +94,10 @@ const MAANDEN_NL = ["januari", "februari", "maart", "april", "mei", "juni", "jul
 const DAGEN_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"];
 const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul",
                       "aug", "sep", "okt", "nov", "dec"];
-const REIS_START = "2026-09-04";
-const REIS_EIND = "2026-09-27";
+const REIS_START = "__REIS_START__";
+const REIS_EIND = "__REIS_EIND__";
+const KM = __KM__;
+const SPOOR = __SPOOR__;
 // Vijf dagen met alle details, daarna nog vijf als ruwe vooruitblik.
 const DAGEN_VOORUIT = 5;
 const DAGEN_TOTAAL = 10;
@@ -392,6 +395,78 @@ function kaart(dag, vandaagIso) {
   </article>`;
 }
 
+// ---- Slingerende route bovenaan ----
+// De vorm komt kant-en-klaar uit dashboard.py, zodat app en reservekopie
+// dezelfde bochten tekenen. Alleen de stand per dag hangt van vandaag af.
+const kmGetal = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+function defenderSvg(x, y, naarRechts) {
+  const s = SPOOR.defender_span / SPOOR.defender_breed;
+  const dx = (SPOOR.defender_breed / 2) * s;
+  const dy = SPOOR.defender_midden * s;
+  const t = naarRechts
+    ? `translate(${(x - dx).toFixed(2)} ${(y - dy).toFixed(2)}) scale(${s.toFixed(4)})`
+    : `translate(${(x + dx).toFixed(2)} ${(y - dy).toFixed(2)}) scale(${(-s).toFixed(4)} ${s.toFixed(4)})`;
+  return `<g class="defender" transform="${t}">${SPOOR.defender}</g>`;
+}
+
+function reisvoortgang() {
+  const vandaag = isoDatum(new Date());
+  const kmTotaal = Object.values(KM).reduce((s, n) => s + n, 0);
+  // Gereden is wat achter de rug is: de dagen voor vandaag.
+  const kmGereden = Object.entries(KM)
+    .filter(([datum]) => datum < vandaag)
+    .reduce((s, [, n]) => s + n, 0);
+
+  let nummer = null, kop;
+  if (vandaag < REIS_START) {
+    const tot = Math.round((uitIso(REIS_START) - uitIso(vandaag)) / 86400000);
+    kop = tot === 1 ? "Vertrek morgen" : `Vertrek over ${tot} dagen`;
+  } else if (vandaag > REIS_EIND) {
+    kop = "Reis afgerond";
+  } else {
+    nummer = Math.round((uitIso(vandaag) - uitIso(REIS_START)) / 86400000) + 1;
+    kop = `Dag ${nummer} van ${SPOOR.punten.length}`;
+  }
+
+  const voorbij = vandaag > REIS_EIND;
+  let wagen = "";
+  const strepen = SPOOR.punten.map(([x, y], i) => {
+    const dag = i + 1;
+    if (nummer !== null && dag === nummer) {
+      // Op de plek van vandaag staat de Defender in plaats van een streep.
+      wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
+      return "";
+    }
+    const stand = nummer === null
+      ? (voorbij ? "was" : "komt")
+      : (dag < nummer ? "was" : "komt");
+    return `<rect class="streep streep-${stand}" x="${(x - 1.2).toFixed(2)}" y="${(y - SPOOR.hoog / 2).toFixed(2)}" width="2.4" height="${SPOOR.hoog}" rx="1.2"></rect>`;
+  }).join("");
+
+  // De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
+  const afgelegd = nummer === null
+    ? (voorbij ? SPOOR.totaal : 0)
+    : SPOOR.lengtes[nummer - 1];
+  const afgelegdeLijn = afgelegd > 0
+    ? `<path class="spoor-lijn spoor-af" d="${SPOOR.pad}" fill="none" stroke-dasharray="${afgelegd} ${SPOOR.totaal}"></path>`
+    : "";
+
+  return `<section class="voortgang">
+    <div class="voortgang-kop">
+      <span class="voortgang-titel">Waar we zijn</span>
+      <span class="voortgang-km">${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} km gereden</span>
+    </div>
+    <p class="voortgang-dag">${kop}</p>
+    <svg class="spoor" viewBox="0 0 100 ${SPOOR.hoogte}" role="img" aria-label="Routevoortgang: ${ontsnap(kop)}, ${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} kilometer gereden">
+      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${wagen}
+    </svg>
+    <div class="voortgang-uiteinden">
+      <span>${kortDatum(REIS_START)}</span><span>${kortDatum(REIS_EIND)}</span>
+    </div>
+  </section>`;
+}
+
 function vooruitblik(dagen) {
   // Bewust karig van vorm: op deze afstand is het een richting, geen planning.
   const rijen = dagen.filter((d) => d.etappe).map((dag) => {
@@ -424,7 +499,8 @@ function vooruitblik(dagen) {
 function teken(dagen, opgehaaldOp, uitOpslag) {
   const vandaagIso = isoDatum(new Date());
   document.getElementById("inhoud").innerHTML =
-    dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
+    reisvoortgang()
+    + dagen.slice(0, DAGEN_VOORUIT).map((d) => kaart(d, vandaagIso)).join("")
     + vooruitblik(dagen.slice(DAGEN_VOORUIT));
 
   const stempel = new Date(opgehaaldOp);
@@ -482,7 +558,13 @@ if ("serviceWorker" in navigator) {
 
 
 def bouw():
+    reisdagen = (date.fromisoformat(route.REIS_EIND)
+                 - date.fromisoformat(route.REIS_START)).days + 1
     script = (SCRIPT
+              .replace("__REIS_START__", route.REIS_START)
+              .replace("__REIS_EIND__", route.REIS_EIND)
+              .replace("__KM__", json.dumps(route.KM))
+              .replace("__SPOOR__", json.dumps(dashboard.bouw_spoor(reisdagen)))
               .replace("__ROUTE__", json.dumps(route.ROUTE, ensure_ascii=False))
               .replace("__NOTITIES__", json.dumps(route.NOTITIES, ensure_ascii=False))
               .replace("__WEER__", json.dumps({str(k): list(v) for k, v in dashboard.WEER.items()}, ensure_ascii=False))

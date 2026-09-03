@@ -4,4 +4,5 @@ __pycache__/
 # Gegenereerde varianten die niet online hoeven.
 dashboard.html
 preview*.html
+test-*.html
 route.kml

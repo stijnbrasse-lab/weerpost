@@ -168,6 +168,198 @@ def tijdstrip(blokken):
             + f'</div></div>')
 
 
+# ---- Slingerende route bovenaan ----
+# Vier rijen van zes dagen, om en om naar rechts en naar links, met bochten
+# aan de uiteinden. Die bochten zijn wat het onderscheidt van een kalender:
+# zonder die U-keer leest het als een raster in plaats van als een route.
+PER_RIJ = 8
+SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
+SPOOR_TOP, SPOOR_RIJHOOGTE = 8.0, 12.0
+STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
+
+
+def _bochtlengte(p0, p1, p2, p3, n=32):
+    """Lengte van een kubische bocht, benaderd door hem op te delen."""
+    lengte, vorige = 0.0, p0
+    for k in range(1, n + 1):
+        t, mt = k / n, 1 - k / n
+        x = (mt ** 3 * p0[0] + 3 * mt * mt * t * p1[0]
+             + 3 * mt * t * t * p2[0] + t ** 3 * p3[0])
+        y = (mt ** 3 * p0[1] + 3 * mt * mt * t * p1[1]
+             + 3 * mt * t * t * p2[1] + t ** 3 * p3[1])
+        lengte += ((x - vorige[0]) ** 2 + (y - vorige[1]) ** 2) ** 0.5
+        vorige = (x, y)
+    return lengte
+
+
+def bouw_spoor(aantal):
+    """Rekent het pad, de dagposities en de afstand langs het pad uit.
+
+    Die afstanden maken het mogelijk de lijn te kleuren tot precies de dag
+    waar je bent. De vorm hangt niet af van de datum, dus dit kan een keer
+    berekend worden en door beide versies gedeeld.
+    """
+    rijen = -(-aantal // PER_RIJ)
+    stap = (SPOOR_RECHTS - SPOOR_LINKS) / (PER_RIJ - 1)
+    rijlengte = SPOOR_RECHTS - SPOOR_LINKS
+    punten, lengtes, stukken = [], [], []
+    tot_hier = 0.0
+
+    for r in range(rijen):
+        y = SPOOR_TOP + r * SPOOR_RIJHOOGTE
+        naar_rechts = r % 2 == 0
+        start = SPOOR_LINKS if naar_rechts else SPOOR_RECHTS
+        richting = stap if naar_rechts else -stap
+        eind = SPOOR_RECHTS if naar_rechts else SPOOR_LINKS
+
+        for i in range(min(PER_RIJ, aantal - r * PER_RIJ)):
+            punten.append((round(start + i * richting, 2), y))
+            lengtes.append(round(tot_hier + abs(i * richting), 2))
+
+        stukken.append(f'{"M" if r == 0 else "L"} {start} {y}')
+        stukken.append(f"L {eind} {y}")
+        tot_hier += rijlengte
+
+        if r < rijen - 1:
+            y2 = y + SPOOR_RIJHOOGTE
+            # Bocht buiten de rij om, links of rechts al naar gelang de richting.
+            bocht = 95.5 if naar_rechts else 4.5
+            stukken.append(f"C {bocht} {y} {bocht} {y2} {eind} {y2}")
+            tot_hier += _bochtlengte((eind, y), (bocht, y), (bocht, y2), (eind, y2))
+
+    return {
+        "pad": " ".join(stukken),
+        "punten": punten,
+        "lengtes": lengtes,
+        "totaal": round(tot_hier, 2),
+        "hoogte": SPOOR_TOP * 2 + (rijen - 1) * SPOOR_RIJHOOGTE,
+        "hoog": STREEP_HOOG,
+        "per_rij": PER_RIJ,
+        "defender": DEFENDER,
+        "defender_breed": DEFENDER_BREED,
+        "defender_midden": DEFENDER_MIDDEN_Y,
+        "defender_span": DEFENDER_SPAN,
+    }
+
+
+# De Defender 110 als markering, getekend in een eigen vlak van 24 bij 13 en
+# daarna op het spoor geschaald. Wat hem herkenbaar maakt op klein formaat is
+# de lange platte daklijn, de korte schuine voorruit en het reservewiel achter.
+DEFENDER_BREED = 24.5
+DEFENDER_MIDDEN_Y = 7.5
+DEFENDER = (
+    # Reservewiel op de achterklep; de naaf wordt uitgespaard zodat het als
+    # wiel leest en niet als een bult aan de achterkant.
+    '<circle class="defender-body" cx="2.4" cy="6.6" r="2.2"></circle>'
+    # Carrosserie: lange platte daklijn, korte schuine ruit, vlakke motorkap.
+    '<path class="defender-body" d="M3.6 10.2 L3.6 2.6 L19.2 2.6 L20.7 5.3 '
+    'L24 5.3 L24 10.2 Z"></path>'
+    '<circle class="defender-body" cx="7.8" cy="10.4" r="2"></circle>'
+    '<circle class="defender-body" cx="20.6" cy="10.4" r="2"></circle>'
+    '<path class="defender-glas" d="M4.8 3.6 H11.4 V6.2 H4.8 Z '
+    'M12.4 3.6 H18.4 V6.2 H12.4 Z"></path>'
+    '<circle class="defender-glas" cx="2.4" cy="6.6" r="0.95"></circle>'
+    '<circle class="defender-glas" cx="7.8" cy="10.4" r="0.75"></circle>'
+    '<circle class="defender-glas" cx="20.6" cy="10.4" r="0.75"></circle>'
+)
+DEFENDER_SPAN = 11.0  # breedte op het spoor
+
+
+def defender(x, y, naar_rechts):
+    """Plaatst de Defender op het spoor, kijkend in de rijrichting."""
+    s = DEFENDER_SPAN / DEFENDER_BREED
+    dx = DEFENDER_BREED / 2 * s
+    dy = DEFENDER_MIDDEN_Y * s
+    if naar_rechts:
+        t = f"translate({x - dx:.2f} {y - dy:.2f}) scale({s:.4f})"
+    else:
+        t = f"translate({x + dx:.2f} {y - dy:.2f}) scale({-s:.4f} {s:.4f})"
+    return f'<g class="defender" transform="{t}">{DEFENDER}</g>'
+
+
+def voortgang(vandaag):
+    """Waar we op de route staan: dagnummer en gereden kilometers."""
+    start = date.fromisoformat(route.REIS_START)
+    eind = date.fromisoformat(route.REIS_EIND)
+    totaal_dagen = (eind - start).days + 1
+    km_totaal = sum(route.KM.values())
+
+    # Gereden is wat achter de rug is: de dagen vóór vandaag.
+    km_gereden = sum(km for datum, km in route.KM.items()
+                     if date.fromisoformat(datum) < vandaag)
+
+    if vandaag < start:
+        dagen_tot = (start - vandaag).days
+        kop = "Vertrek morgen" if dagen_tot == 1 else f"Vertrek over {dagen_tot} dagen"
+        nummer = None
+    elif vandaag > eind:
+        kop = "Reis afgerond"
+        nummer = None
+    else:
+        nummer = (vandaag - start).days + 1
+        kop = f"Dag {nummer} van {totaal_dagen}"
+
+    return {"kop": kop, "nummer": nummer, "totaal_dagen": totaal_dagen,
+            "km_gereden": km_gereden, "km_totaal": km_totaal}
+
+
+def _km(getal):
+    return f"{getal:,}".replace(",", ".")
+
+
+def reisvoortgang(vandaag):
+    v = voortgang(vandaag)
+    spoor = bouw_spoor(v["totaal_dagen"])
+
+    voorbij = vandaag > date.fromisoformat(route.REIS_EIND)
+    strepen, wagen = [], ""
+    for i, (x, y) in enumerate(spoor["punten"], start=1):
+        if v["nummer"] is not None and i == v["nummer"]:
+            # Op de plek van vandaag staat de Defender in plaats van een streep.
+            wagen = defender(x, y, ((i - 1) // PER_RIJ) % 2 == 0)
+            continue
+        if v["nummer"] is None:
+            stand = "was" if voorbij else "komt"
+        else:
+            stand = "was" if i < v["nummer"] else "komt"
+        strepen.append(
+            f'<rect class="streep streep-{stand}" x="{x - 1.2:.2f}" '
+            f'y="{y - STREEP_HOOG / 2:.2f}" width="2.4" height="{STREEP_HOOG:.0f}" '
+            f'rx="1.2"></rect>')
+
+    # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
+    if v["nummer"] is None:
+        afgelegd = spoor["totaal"] if voorbij else 0
+    else:
+        afgelegd = spoor["lengtes"][v["nummer"] - 1]
+    afgelegde_lijn = (
+        f'<path class="spoor-lijn spoor-af" d="{spoor["pad"]}" fill="none" '
+        f'stroke-dasharray="{afgelegd:.2f} {spoor["totaal"]:.2f}"></path>'
+        if afgelegd > 0 else "")
+
+    start = date.fromisoformat(route.REIS_START)
+    eind = date.fromisoformat(route.REIS_EIND)
+
+    return (f'<section class="voortgang">'
+            f'<div class="voortgang-kop">'
+            f'<span class="voortgang-titel">Waar we zijn</span>'
+            f'<span class="voortgang-km">{_km(v["km_gereden"])} van '
+            f'{_km(v["km_totaal"])} km gereden</span>'
+            f'</div>'
+            f'<p class="voortgang-dag">{v["kop"]}</p>'
+            f'<svg class="spoor" viewBox="0 0 100 {spoor["hoogte"]:.0f}" '
+            f'role="img" aria-label="Routevoortgang: {html.escape(v["kop"])}, '
+            f'{_km(v["km_gereden"])} van {_km(v["km_totaal"])} kilometer gereden">'
+            f'<path class="spoor-lijn" d="{spoor["pad"]}" fill="none"></path>'
+            + afgelegde_lijn
+            + "".join(strepen)
+            + wagen
+            + f'</svg>'
+            f'<div class="voortgang-uiteinden">'
+            f'<span>{kort_datum(start)}</span><span>{kort_datum(eind)}</span>'
+            f'</div></section>')
+
+
 def vooruitblik(dagen):
     """Ruwe vooruitblik voor dag 6 tot en met 10: alleen plek, piek en regen.
 
@@ -292,6 +484,7 @@ CSS = """
   --accent: #8F6115;
   --nat: #2F6FA6;
   --nat-zacht: rgba(47, 111, 166, .16);
+  --defender: #3F6B45;
   --schaduw: 0 1px 2px rgba(20, 26, 32, .06), 0 8px 20px -12px rgba(20, 26, 32, .3);
 }
 @media (prefers-color-scheme: dark) {
@@ -305,6 +498,7 @@ CSS = """
     --accent: #D7A24A;
     --nat: #6FAEE0;
     --nat-zacht: rgba(111, 174, 224, .18);
+    --defender: #79B37C;
     --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
   }
 }
@@ -318,6 +512,7 @@ CSS = """
   --accent: #D7A24A;
   --nat: #6FAEE0;
   --nat-zacht: rgba(111, 174, 224, .18);
+  --defender: #79B37C;
   --schaduw: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -12px rgba(0, 0, 0, .85);
 }
 
@@ -360,6 +555,61 @@ body {
   text-wrap: balance;
 }
 .titelblok .bijschrift { margin: 0; color: var(--gedempt); font-size: .88rem; }
+
+/* ---- Slingerende route ---- */
+.voortgang {
+  background: var(--kaart);
+  border: 1px solid var(--lijn);
+  border-radius: 4px;
+  padding: .9rem 1.1rem 1rem;
+  box-shadow: var(--schaduw);
+}
+.voortgang-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .3rem .6rem;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .66rem;
+}
+.voortgang-titel {
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.voortgang-km {
+  margin-left: auto;
+  color: var(--gedempt);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.voortgang-dag {
+  margin: .15rem 0 .6rem;
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.spoor { display: block; width: 100%; height: auto; overflow: visible; }
+.spoor-lijn {
+  stroke: var(--lijn);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+.voortgang-uiteinden {
+  display: flex;
+  justify-content: space-between;
+  padding-top: .4rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: .62rem;
+  color: var(--gedempt);
+}
+.streep { fill: var(--lijn); }
+.streep-was { fill: var(--accent); opacity: .55; }
+.spoor-af { stroke: var(--accent); opacity: .55; }
+.defender-body { fill: var(--defender); }
+.defender-glas { fill: var(--kaart); }
 
 .kaart {
   background: var(--kaart);
@@ -723,6 +973,8 @@ def bouw_pagina(dagen, opgehaald):
   </header>
 
   <div id="verouderd" class="verouderd" hidden></div>
+
+  {reisvoortgang(vandaag)}
 
   {kaarten}
 
