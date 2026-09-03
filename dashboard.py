@@ -288,27 +288,25 @@ def bouw_spoor(aantal):
 # De Defender 110 als markering, getekend in een eigen vlak van 24 bij 13 en
 # daarna op het spoor geschaald. Wat hem herkenbaar maakt op klein formaat is
 # de lange platte daklijn, de korte schuine voorruit en het reservewiel achter.
-DEFENDER_BREED = 24.6
+DEFENDER_BREED = 21.0
 DEFENDER_MIDDEN_Y = 6.95
 DEFENDER = (
-    # Reservewiel op de achterklep, met uitgespaarde naaf.
-    '<circle class="defender-body" cx="2.0" cy="5.6" r="2.0"></circle>'
     # Carrosserie. De onderrand stapt omhoog boven beide wielen: dat zijn de
     # uitstekende wielkasten, en die maken op klein formaat het verschil
-    # tussen een Defender en zomaar een blokkendoos.
-    '<path class="defender-body" d="M3.4 8.4 L3.4 2.3 L16.8 2.3 L17.8 5.7 '
-    'L24.4 5.7 L24.4 8.4 L22.4 8.4 L22.4 7.6 L19.4 7.6 L19.4 8.4 '
-    'L9.1 8.4 L9.1 7.6 L6.1 7.6 L6.1 8.4 Z"></path>'
-    '<circle class="defender-body" cx="7.6" cy="9.3" r="2.3"></circle>'
-    '<circle class="defender-body" cx="20.9" cy="9.3" r="2.3"></circle>'
+    # tussen een Defender en zomaar een blokkendoos. Het reservewiel op de
+    # achterklep is er bewust af; op deze maat maakte het er drie cirkels van.
+    '<path class="defender-body" d="M0 8.4 L0 2.3 L13.4 2.3 L14.4 5.7 '
+    'L21 5.7 L21 8.4 L19 8.4 L19 7.6 L16 7.6 L16 8.4 '
+    'L5.7 8.4 L5.7 7.6 L2.7 7.6 L2.7 8.4 Z"></path>'
+    '<circle class="defender-body" cx="4.2" cy="9.3" r="2.3"></circle>'
+    '<circle class="defender-body" cx="17.5" cy="9.3" r="2.3"></circle>'
     # Drie zijruiten: de lange glaspartij van een 110 stationwagen.
-    '<path class="defender-glas" d="M4.7 3.2 H8.6 V5.3 H4.7 Z '
-    'M9.3 3.2 H13.2 V5.3 H9.3 Z M13.9 3.2 H16.4 V5.3 H13.9 Z"></path>'
-    '<circle class="defender-glas" cx="2.0" cy="5.6" r="0.85"></circle>'
-    '<circle class="defender-glas" cx="7.6" cy="9.3" r="0.85"></circle>'
-    '<circle class="defender-glas" cx="20.9" cy="9.3" r="0.85"></circle>'
+    '<path class="defender-glas" d="M1.3 3.2 H5.2 V5.3 H1.3 Z '
+    'M5.9 3.2 H9.8 V5.3 H5.9 Z M10.5 3.2 H13.0 V5.3 H10.5 Z"></path>'
+    '<circle class="defender-glas" cx="4.2" cy="9.3" r="0.85"></circle>'
+    '<circle class="defender-glas" cx="17.5" cy="9.3" r="0.85"></circle>'
 )
-DEFENDER_SPAN = 11.5  # breedte op het spoor
+DEFENDER_SPAN = 10.0  # breedte op het spoor
 
 
 def defender(x, y, naar_rechts):
