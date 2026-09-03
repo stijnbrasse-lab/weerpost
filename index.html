@@ -140,14 +140,12 @@ body {
   stroke-width: 1.1;
   stroke-linecap: round;
 }
-.voortgang-uiteinden {
-  display: flex;
-  justify-content: space-between;
-  padding-top: .4rem;
+.spoor-datum {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .62rem;
-  color: var(--gedempt);
+  font-size: 3.2px;
+  fill: var(--gedempt);
 }
+.spoor-datum.is-nu { fill: var(--accent); }
 .streep { fill: var(--lijn); }
 .streep-was { fill: var(--accent); opacity: .55; }
 .spoor-af { stroke: var(--accent); opacity: .55; }
@@ -565,7 +563,7 @@ const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul",
 const REIS_START = "2026-09-04";
 const REIS_EIND = "2026-09-27";
 const KM = {"2026-09-04": 500, "2026-09-05": 536, "2026-09-06": 549, "2026-09-07": 0, "2026-09-08": 0, "2026-09-09": 45, "2026-09-10": 150, "2026-09-11": 120, "2026-09-12": 0, "2026-09-13": 60, "2026-09-14": 110, "2026-09-15": 136, "2026-09-16": 90, "2026-09-17": 0, "2026-09-18": 0, "2026-09-19": 100, "2026-09-20": 180, "2026-09-21": 200, "2026-09-22": 0, "2026-09-23": 0, "2026-09-24": 500, "2026-09-25": 500, "2026-09-26": 500, "2026-09-27": 0};
-const SPOOR = {"pad": "M 10.0 8.0 L 90.0 8.0 C 95.5 8.0 95.5 20.0 90.0 20.0 L 90.0 20.0 L 10.0 20.0 C 4.5 20.0 4.5 32.0 10.0 32.0 L 10.0 32.0 L 90.0 32.0", "punten": [[10.0, 8.0], [21.43, 8.0], [32.86, 8.0], [44.29, 8.0], [55.71, 8.0], [67.14, 8.0], [78.57, 8.0], [90.0, 8.0], [90.0, 20.0], [78.57, 20.0], [67.14, 20.0], [55.71, 20.0], [44.29, 20.0], [32.86, 20.0], [21.43, 20.0], [10.0, 20.0], [10.0, 32.0], [21.43, 32.0], [32.86, 32.0], [44.29, 32.0], [55.71, 32.0], [67.14, 32.0], [78.57, 32.0], [90.0, 32.0]], "lengtes": [0.0, 11.43, 22.86, 34.29, 45.71, 57.14, 68.57, 80.0, 96.18, 107.61, 119.04, 130.47, 141.9, 153.33, 164.76, 176.18, 192.37, 203.8, 215.23, 226.66, 238.08, 249.51, 260.94, 272.37], "totaal": 272.37, "hoogte": 40.0, "hoog": 8.0, "per_rij": 8, "defender": "<circle class=\"defender-body\" cx=\"2.4\" cy=\"6.6\" r=\"2.2\"></circle><path class=\"defender-body\" d=\"M3.6 10.2 L3.6 2.6 L19.2 2.6 L20.7 5.3 L24 5.3 L24 10.2 Z\"></path><circle class=\"defender-body\" cx=\"7.8\" cy=\"10.4\" r=\"2\"></circle><circle class=\"defender-body\" cx=\"20.6\" cy=\"10.4\" r=\"2\"></circle><path class=\"defender-glas\" d=\"M4.8 3.6 H11.4 V6.2 H4.8 Z M12.4 3.6 H18.4 V6.2 H12.4 Z\"></path><circle class=\"defender-glas\" cx=\"2.4\" cy=\"6.6\" r=\"0.95\"></circle><circle class=\"defender-glas\" cx=\"7.8\" cy=\"10.4\" r=\"0.75\"></circle><circle class=\"defender-glas\" cx=\"20.6\" cy=\"10.4\" r=\"0.75\"></circle>", "defender_breed": 24.5, "defender_midden": 7.5, "defender_span": 11.0};
+const SPOOR = {"pad": "M 10.0 8.0 L 90.0 8.0 C 95.5 8.0 95.5 23.0 90.0 23.0 L 90.0 23.0 L 10.0 23.0 C 4.5 23.0 4.5 38.0 10.0 38.0 L 10.0 38.0 L 90.0 38.0", "punten": [[10.0, 8.0], [21.43, 8.0], [32.86, 8.0], [44.29, 8.0], [55.71, 8.0], [67.14, 8.0], [78.57, 8.0], [90.0, 8.0], [90.0, 23.0], [78.57, 23.0], [67.14, 23.0], [55.71, 23.0], [44.29, 23.0], [32.86, 23.0], [21.43, 23.0], [10.0, 23.0], [10.0, 38.0], [21.43, 38.0], [32.86, 38.0], [44.29, 38.0], [55.71, 38.0], [67.14, 38.0], [78.57, 38.0], [90.0, 38.0]], "lengtes": [0.0, 11.43, 22.86, 34.29, 45.71, 57.14, 68.57, 80.0, 98.8, 110.23, 121.66, 133.09, 144.52, 155.95, 167.37, 178.8, 197.61, 209.03, 220.46, 231.89, 243.32, 254.75, 266.18, 277.61], "totaal": 277.61, "hoogte": 46.0, "hoog": 8.0, "per_rij": 8, "defender": "<circle class=\"defender-body\" cx=\"2.4\" cy=\"6.6\" r=\"2.2\"></circle><path class=\"defender-body\" d=\"M3.6 10.2 L3.6 2.6 L19.2 2.6 L20.7 5.3 L24 5.3 L24 10.2 Z\"></path><circle class=\"defender-body\" cx=\"7.8\" cy=\"10.4\" r=\"2\"></circle><circle class=\"defender-body\" cx=\"20.6\" cy=\"10.4\" r=\"2\"></circle><path class=\"defender-glas\" d=\"M4.8 3.6 H11.4 V6.2 H4.8 Z M12.4 3.6 H18.4 V6.2 H12.4 Z\"></path><circle class=\"defender-glas\" cx=\"2.4\" cy=\"6.6\" r=\"0.95\"></circle><circle class=\"defender-glas\" cx=\"7.8\" cy=\"10.4\" r=\"0.75\"></circle><circle class=\"defender-glas\" cx=\"20.6\" cy=\"10.4\" r=\"0.75\"></circle>", "defender_breed": 24.5, "defender_midden": 7.5, "defender_span": 11.0, "labels": ["vr 04", "za 05", "zo 06", "ma 07", "di 08", "wo 09", "do 10", "vr 11", "za 12", "zo 13", "ma 14", "di 15", "wo 16", "do 17", "vr 18", "za 19", "zo 20", "ma 21", "di 22", "wo 23", "do 24", "vr 25", "za 26", "zo 27"]};
 // Vijf dagen met alle details, daarna nog vijf als ruwe vooruitblik.
 const DAGEN_VOORUIT = 5;
 const DAGEN_TOTAAL = 10;
@@ -899,9 +897,12 @@ function reisvoortgang() {
 
   const voorbij = vandaag > REIS_EIND;
   let wagen = "";
+  const merken = [];
   const strepen = SPOOR.punten.map(([x, y], i) => {
     const dag = i + 1;
-    if (nummer !== null && dag === nummer) {
+    const nu = nummer !== null && dag === nummer;
+    merken.push(`<text class="spoor-datum${nu ? " is-nu" : ""}" x="${x.toFixed(2)}" y="${(y + 7.4).toFixed(2)}" text-anchor="middle">${SPOOR.labels[i]}</text>`);
+    if (nu) {
       // Op de plek van vandaag staat de Defender in plaats van een streep.
       wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
       return "";
@@ -927,11 +928,8 @@ function reisvoortgang() {
     </div>
     <p class="voortgang-dag">${kop}</p>
     <svg class="spoor" viewBox="0 0 100 ${SPOOR.hoogte}" role="img" aria-label="Routevoortgang: ${ontsnap(kop)}, ${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} kilometer gereden">
-      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${wagen}
+      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${merken.join("")}${wagen}
     </svg>
-    <div class="voortgang-uiteinden">
-      <span>${kortDatum(REIS_START)}</span><span>${kortDatum(REIS_EIND)}</span>
-    </div>
   </section>`;
 }
 

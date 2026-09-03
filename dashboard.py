@@ -2,7 +2,7 @@
 """Bouwt de HTML-pagina voor het vakantiedashboard uit de opgehaalde weerdata."""
 import html
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import route
 import weerdata
@@ -174,8 +174,19 @@ def tijdstrip(blokken):
 # zonder die U-keer leest het als een raster in plaats van als een route.
 PER_RIJ = 8
 SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
-SPOOR_TOP, SPOOR_RIJHOOGTE = 8.0, 12.0
+SPOOR_TOP, SPOOR_RIJHOOGTE = 8.0, 15.0
 STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
+
+
+def spoor_labels():
+    """Korte datum per reisdag, zoals 'vr 04', voor onder de streepjes."""
+    start = date.fromisoformat(route.REIS_START)
+    aantal = (date.fromisoformat(route.REIS_EIND) - start).days + 1
+    labels = []
+    for i in range(aantal):
+        d = start + timedelta(days=i)
+        labels.append(f"{DAGEN_KORT[d.weekday()]} {d.day:02d}")
+    return labels
 
 
 def _bochtlengte(p0, p1, p2, p3, n=32):
@@ -312,20 +323,25 @@ def reisvoortgang(vandaag):
     spoor = bouw_spoor(v["totaal_dagen"])
 
     voorbij = vandaag > date.fromisoformat(route.REIS_EIND)
-    strepen, wagen = [], ""
+    labels = spoor_labels()
+    strepen, merken, wagen = [], [], ""
     for i, (x, y) in enumerate(spoor["punten"], start=1):
-        if v["nummer"] is not None and i == v["nummer"]:
+        nu = v["nummer"] is not None and i == v["nummer"]
+        if nu:
             # Op de plek van vandaag staat de Defender in plaats van een streep.
             wagen = defender(x, y, ((i - 1) // PER_RIJ) % 2 == 0)
-            continue
-        if v["nummer"] is None:
-            stand = "was" if voorbij else "komt"
         else:
-            stand = "was" if i < v["nummer"] else "komt"
-        strepen.append(
-            f'<rect class="streep streep-{stand}" x="{x - 1.2:.2f}" '
-            f'y="{y - STREEP_HOOG / 2:.2f}" width="2.4" height="{STREEP_HOOG:.0f}" '
-            f'rx="1.2"></rect>')
+            if v["nummer"] is None:
+                stand = "was" if voorbij else "komt"
+            else:
+                stand = "was" if i < v["nummer"] else "komt"
+            strepen.append(
+                f'<rect class="streep streep-{stand}" x="{x - 1.2:.2f}" '
+                f'y="{y - STREEP_HOOG / 2:.2f}" width="2.4" height="{STREEP_HOOG:.0f}" '
+                f'rx="1.2"></rect>')
+        merken.append(
+            f'<text class="spoor-datum{" is-nu" if nu else ""}" x="{x:.2f}" '
+            f'y="{y + 7.4:.2f}" text-anchor="middle">{labels[i - 1]}</text>')
 
     # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
     if v["nummer"] is None:
@@ -353,11 +369,9 @@ def reisvoortgang(vandaag):
             f'<path class="spoor-lijn" d="{spoor["pad"]}" fill="none"></path>'
             + afgelegde_lijn
             + "".join(strepen)
+            + "".join(merken)
             + wagen
-            + f'</svg>'
-            f'<div class="voortgang-uiteinden">'
-            f'<span>{kort_datum(start)}</span><span>{kort_datum(eind)}</span>'
-            f'</div></section>')
+            + f'</svg></section>')
 
 
 def vooruitblik(dagen):
@@ -597,14 +611,12 @@ body {
   stroke-width: 1.1;
   stroke-linecap: round;
 }
-.voortgang-uiteinden {
-  display: flex;
-  justify-content: space-between;
-  padding-top: .4rem;
+.spoor-datum {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: .62rem;
-  color: var(--gedempt);
+  font-size: 3.2px;
+  fill: var(--gedempt);
 }
+.spoor-datum.is-nu { fill: var(--accent); }
 .streep { fill: var(--lijn); }
 .streep-was { fill: var(--accent); opacity: .55; }
 .spoor-af { stroke: var(--accent); opacity: .55; }

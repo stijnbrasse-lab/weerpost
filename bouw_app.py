@@ -431,9 +431,12 @@ function reisvoortgang() {
 
   const voorbij = vandaag > REIS_EIND;
   let wagen = "";
+  const merken = [];
   const strepen = SPOOR.punten.map(([x, y], i) => {
     const dag = i + 1;
-    if (nummer !== null && dag === nummer) {
+    const nu = nummer !== null && dag === nummer;
+    merken.push(`<text class="spoor-datum${nu ? " is-nu" : ""}" x="${x.toFixed(2)}" y="${(y + 7.4).toFixed(2)}" text-anchor="middle">${SPOOR.labels[i]}</text>`);
+    if (nu) {
       // Op de plek van vandaag staat de Defender in plaats van een streep.
       wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
       return "";
@@ -459,11 +462,8 @@ function reisvoortgang() {
     </div>
     <p class="voortgang-dag">${kop}</p>
     <svg class="spoor" viewBox="0 0 100 ${SPOOR.hoogte}" role="img" aria-label="Routevoortgang: ${ontsnap(kop)}, ${kmGetal(kmGereden)} van ${kmGetal(kmTotaal)} kilometer gereden">
-      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${wagen}
+      <path class="spoor-lijn" d="${SPOOR.pad}" fill="none"></path>${afgelegdeLijn}${strepen}${merken.join("")}${wagen}
     </svg>
-    <div class="voortgang-uiteinden">
-      <span>${kortDatum(REIS_START)}</span><span>${kortDatum(REIS_EIND)}</span>
-    </div>
   </section>`;
 }
 
@@ -564,7 +564,8 @@ def bouw():
               .replace("__REIS_START__", route.REIS_START)
               .replace("__REIS_EIND__", route.REIS_EIND)
               .replace("__KM__", json.dumps(route.KM))
-              .replace("__SPOOR__", json.dumps(dashboard.bouw_spoor(reisdagen)))
+              .replace("__SPOOR__", json.dumps(dict(dashboard.bouw_spoor(reisdagen),
+                                      labels=dashboard.spoor_labels())))
               .replace("__ROUTE__", json.dumps(route.ROUTE, ensure_ascii=False))
               .replace("__NOTITIES__", json.dumps(route.NOTITIES, ensure_ascii=False))
               .replace("__WEER__", json.dumps({str(k): list(v) for k, v in dashboard.WEER.items()}, ensure_ascii=False))
