@@ -174,7 +174,7 @@ def tijdstrip(blokken):
 # zonder die U-keer leest het als een raster in plaats van als een route.
 PER_RIJ = 8
 SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
-SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 6.0, 14.0, 8.0
+SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 6.0, 18.0, 8.0
 SPOOR_AANLOOP = 2.0  # waar het pad begint, links van de eerste dag
 STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
 
@@ -257,14 +257,17 @@ def bouw_spoor(aantal):
     # naar dag N loopt van kamp N-1 naar kamp N; voor dag 1 is dat het
     # aanloopstuk. Valt een traject in een bocht, dan gaat het label naar de
     # buitenkant daarvan.
-    tussen = [((SPOOR_AANLOOP + SPOOR_LINKS) / 2, punten[0][1])]
+    # Elk label is (x, y, in_bocht). Een bochtlabel staat net buiten de curve
+    # en midden tussen de twee rijen; anders kruipt het tegen de datum van de
+    # rij erboven aan.
+    tussen = [((SPOOR_AANLOOP + SPOOR_LINKS) / 2, punten[0][1], 0)]
     for i in range(1, len(punten)):
         (vx, vy), (nx, ny) = punten[i - 1], punten[i]
         if vy == ny:
-            tussen.append((round((vx + nx) / 2, 2), vy))
+            tussen.append((round((vx + nx) / 2, 2), vy, 0))
         else:
-            bocht = 95.5 if ((i - 1) // PER_RIJ) % 2 == 0 else 4.5
-            tussen.append((bocht, round((vy + ny) / 2, 2)))
+            buiten = 98.0 if ((i - 1) // PER_RIJ) % 2 == 0 else 2.0
+            tussen.append((buiten, round((vy + ny) / 2, 2), 1))
 
     return {
         "pad": " ".join(stukken),
@@ -373,10 +376,11 @@ def reisvoortgang(vandaag):
             f'y="{y + 7:.2f}" text-anchor="middle">{labels[i - 1]}</text>')
         # De kilometers staan op het traject ernaartoe, niet onder de dag.
         km = kilometers[i - 1]
-        tx, ty = spoor["tussen"][i - 1]
+        tx, ty, in_bocht = spoor["tussen"][i - 1]
+        ky = ty + 1.0 if in_bocht else ty - 2.4
         merken.append(
             f'<text class="spoor-km{" is-nul" if not km else ""}" x="{tx:.2f}" '
-            f'y="{ty - 2.4:.2f}" text-anchor="middle">{km}</text>')
+            f'y="{ky:.2f}" text-anchor="middle">{km}</text>')
 
     # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
     if v["nummer"] is None:
