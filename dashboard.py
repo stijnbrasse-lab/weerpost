@@ -174,8 +174,8 @@ def tijdstrip(blokken):
 # zonder die U-keer leest het als een raster in plaats van als een route.
 PER_RIJ = 8
 SPOOR_LINKS, SPOOR_RECHTS = 10.0, 90.0
-SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 8.0, 16.5, 8.0
-SPOOR_AANLOOP = 3.0  # waar het pad begint, links van de eerste dag
+SPOOR_TOP, SPOOR_RIJHOOGTE, SPOOR_BODEM = 6.0, 14.0, 8.0
+SPOOR_AANLOOP = 2.0  # waar het pad begint, links van de eerste dag
 STREEP_HOOG, STREEP_HOOG_NU = 8.0, 11.0
 
 
@@ -376,7 +376,7 @@ def reisvoortgang(vandaag):
         tx, ty = spoor["tussen"][i - 1]
         merken.append(
             f'<text class="spoor-km{" is-nul" if not km else ""}" x="{tx:.2f}" '
-            f'y="{ty - 5:.2f}" text-anchor="middle">{km}</text>')
+            f'y="{ty - 2.4:.2f}" text-anchor="middle">{km}</text>')
 
     # De lijn gekleurd tot waar we staan; dat leest als afgelegde weg.
     if v["nummer"] is None:

@@ -439,7 +439,7 @@ function reisvoortgang() {
     const km = SPOOR.km[i];
     const [tx, ty] = SPOOR.tussen[i];
     merken.push(`<text class="spoor-datum${nu ? " is-nu" : ""}" x="${x.toFixed(2)}" y="${(y + 7).toFixed(2)}" text-anchor="middle">${SPOOR.labels[i]}</text>`
-              + `<text class="spoor-km${km ? "" : " is-nul"}" x="${tx.toFixed(2)}" y="${(ty - 5).toFixed(2)}" text-anchor="middle">${km}</text>`);
+              + `<text class="spoor-km${km ? "" : " is-nul"}" x="${tx.toFixed(2)}" y="${(ty - 2.4).toFixed(2)}" text-anchor="middle">${km}</text>`);
     if (nu) {
       // Op de plek van vandaag staat de Defender in plaats van een streep.
       wagen = defenderSvg(x, y, Math.floor(i / SPOOR.per_rij) % 2 === 0);
